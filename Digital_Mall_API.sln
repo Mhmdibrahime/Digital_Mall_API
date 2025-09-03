@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34622.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Digital_Mall_API", "Digital_Mall_API\Digital_Mall_API.csproj", "{6FC6C1B9-013D-43D3-923C-18E33448F9DA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6FC6C1B9-013D-43D3-923C-18E33448F9DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FC6C1B9-013D-43D3-923C-18E33448F9DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FC6C1B9-013D-43D3-923C-18E33448F9DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FC6C1B9-013D-43D3-923C-18E33448F9DA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {734008A0-EFB8-4271-9BCD-ADD5E24C48CE}
+	EndGlobalSection
+EndGlobal

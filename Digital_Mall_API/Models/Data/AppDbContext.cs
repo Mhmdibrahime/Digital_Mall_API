@@ -1,0 +1,156 @@
+﻿using Digital_Mall_API.Models.Entities.User___Authentication;
+using Digital_Mall_API.Models.Entities.Product_Catalog;
+using Digital_Mall_API.Models.Entities.Orders___Shopping;
+using Digital_Mall_API.Models.Entities.Reels___Content;
+using Digital_Mall_API.Models.Entities.T_Shirt_Customization;
+using Digital_Mall_API.Models.Entities.Financials;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
+namespace Digital_Mall_API.Models.Data
+{
+    public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
+    {
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        {
+        }
+
+        // Your DbSets here...
+        public DbSet<Customer> Customers { get; set; }
+        public DbSet<Brand> Brands { get; set; }
+        public DbSet<FashionModel> FashionModels { get; set; }
+        public DbSet<TshirtDesigner> TshirtDesigners { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<Product> Products { get; set; }
+        public DbSet<ProductVariant> ProductVariants { get; set; }
+        public DbSet<ProductImage> ProductImages { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<Reel> Reels { get; set; }
+        public DbSet<ReelProduct> ReelProducts { get; set; }
+        public DbSet<TshirtDesignOrder> TshirtDesignOrders { get; set; }
+        public DbSet<Payout> Payouts { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<ApplicationUser>().ToTable("AspNetUsers");
+            modelBuilder.Entity<Customer>().ToTable("Customers");
+            modelBuilder.Entity<Brand>().ToTable("Brands");
+            modelBuilder.Entity<FashionModel>().ToTable("FashionModels");
+            modelBuilder.Entity<TshirtDesigner>().ToTable("TshirtDesigners");
+
+            modelBuilder.Entity<Customer>()
+                .HasOne(c => c.User)
+                .WithOne(u => u.CustomerProfile)
+                .HasForeignKey<Customer>(c => c.Id)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Brand>()
+                .HasOne(b => b.User)
+                .WithOne(u => u.BrandProfile)
+                .HasForeignKey<Brand>(b => b.Id)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<FashionModel>()
+                .HasOne(fm => fm.User)
+                .WithOne(u => u.ModelProfile)
+                .HasForeignKey<FashionModel>(fm => fm.Id)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<TshirtDesigner>()
+                .HasOne(td => td.User)
+                .WithOne(u => u.DesignerProfile)
+                .HasForeignKey<TshirtDesigner>(td => td.Id)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ReelProduct>()
+                .HasKey(rp => new { rp.ReelId, rp.ProductId });
+
+            modelBuilder.Entity<ReelProduct>()
+                .HasOne(rp => rp.Reel)
+                .WithMany(r => r.LinkedProducts)
+                .HasForeignKey(rp => rp.ReelId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ReelProduct>()
+                .HasOne(rp => rp.Product)
+                .WithMany(p => p.ReelProducts)
+                .HasForeignKey(rp => rp.ProductId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Order>()
+                .HasOne(o => o.Customer)
+                .WithMany(c => c.Orders)
+                .HasForeignKey(o => o.CustomerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Order>()
+                .HasOne(o => o.Brand)
+                .WithMany(b => b.Orders)
+                .HasForeignKey(o => o.BrandId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.Brand)
+                .WithMany(b => b.Products)
+                .HasForeignKey(p => p.BrandId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.Category)
+                .WithMany(c => c.Products)
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ProductVariant>()
+                .HasOne(pv => pv.Product)
+                .WithMany(p => p.Variants)
+                .HasForeignKey(pv => pv.ProductId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ProductImage>()
+                .HasOne(pi => pi.Product)
+                .WithMany(p => p.Images)
+                .HasForeignKey(pi => pi.ProductId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+           
+
+            modelBuilder.Entity<OrderItem>()
+                .HasOne(oi => oi.Order)
+                .WithMany(o => o.OrderItems)
+                .HasForeignKey(oi => oi.OrderId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<OrderItem>()
+                .HasOne(oi => oi.ProductVariant)
+                .WithMany(pv => pv.OrderItems)
+                .HasForeignKey(oi => oi.ProductVariantId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Reel>()
+                .HasOne(r => r.PostedByUser)
+                .WithMany()
+                .HasForeignKey(r => r.PostedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<TshirtDesignOrder>()
+                .HasOne(t => t.CustomerUser)
+                .WithMany()
+                .HasForeignKey(t => t.CustomerUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Payout>()
+                .HasOne(p => p.PayeeUser)
+                .WithMany()
+                .HasForeignKey(p => p.PayeeUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+        
+           
+        }
+    }
+}
