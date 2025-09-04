@@ -8,7 +8,7 @@ namespace Digital_Mall_API.Seed
         public static async Task SeedAdminAsync(IServiceProvider serviceProvider)
         {
             using var scope = serviceProvider.CreateScope();
-            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
             const string adminRole = "Admin";
@@ -19,7 +19,7 @@ namespace Digital_Mall_API.Seed
            
             if (!await roleManager.RoleExistsAsync(adminRole))
             {
-                await roleManager.CreateAsync(new IdentityRole(adminRole));
+                await roleManager.CreateAsync(new IdentityRole<Guid>(adminRole));
             }
 
             
