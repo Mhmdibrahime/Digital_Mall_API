@@ -6,13 +6,13 @@ namespace Digital_Mall_API.Models.Entities.Orders___Shopping
 {
     public class OrderItem
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
-        public Guid OrderId { get; set; }
+        public int OrderId { get; set; }
 
         [Required]
-        public Guid ProductVariantId { get; set; }
+        public int ProductVariantId { get; set; }
 
         [Required]
         [Range(1, int.MaxValue)]

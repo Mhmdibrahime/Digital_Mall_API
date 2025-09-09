@@ -8,10 +8,10 @@ namespace Digital_Mall_API.Models.Entities.Reels___Content
 {
     public class Reel
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
-        public Guid PostedByUserId { get; set; }
+        public string PostedByUserId { get; set; }
 
         [Required]
         [StringLength(500)]
@@ -34,7 +34,7 @@ namespace Digital_Mall_API.Models.Entities.Reels___Content
         [Required]
         [Range(0, int.MaxValue)]
         public int LikesCount { get; set; } = 0;
-        public virtual ApplicationUser? PostedByUser { get; set; }
+        public virtual FashionModel? PostedByUser { get; set; }
         public virtual List<ReelProduct>? LinkedProducts { get; set; } = new List<ReelProduct>();
     }
 }

@@ -6,7 +6,7 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
 {
     public class Category
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
         [StringLength(100)]

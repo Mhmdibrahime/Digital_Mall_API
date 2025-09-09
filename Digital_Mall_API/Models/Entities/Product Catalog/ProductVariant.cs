@@ -5,10 +5,10 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
 {
     public class ProductVariant
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
-        public Guid ProductId { get; set; }
+        public int ProductId { get; set; }
 
         [Required]
         [StringLength(50)]

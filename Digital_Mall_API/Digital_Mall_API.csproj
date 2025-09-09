@@ -10,12 +10,9 @@
     <Folder Include="Controllers\BrandAdmin\" />
     <Folder Include="Controllers\ModelAdmin\" />
     <Folder Include="Controllers\DesignerAdmin\" />
-    <Folder Include="Controllers\SuperAdmin\" />
-    <Folder Include="Migrations\" />
     <Folder Include="Models\DTOs\BrandAdminDTOs\" />
     <Folder Include="Models\DTOs\ModelAdminDTOs\" />
     <Folder Include="Models\DTOs\DesignerAdminDTOs\" />
-    <Folder Include="Models\DTOs\SuperAdminDTOs\" />
   </ItemGroup>
 
   <ItemGroup>

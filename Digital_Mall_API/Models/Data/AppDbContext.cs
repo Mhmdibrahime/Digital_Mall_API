@@ -42,29 +42,7 @@ namespace Digital_Mall_API.Models.Data
             modelBuilder.Entity<FashionModel>().ToTable("FashionModels");
             modelBuilder.Entity<TshirtDesigner>().ToTable("TshirtDesigners");
 
-            modelBuilder.Entity<Customer>()
-                .HasOne(c => c.User)
-                .WithOne(u => u.CustomerProfile)
-                .HasForeignKey<Customer>(c => c.Id)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<Brand>()
-                .HasOne(b => b.User)
-                .WithOne(u => u.BrandProfile)
-                .HasForeignKey<Brand>(b => b.Id)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<FashionModel>()
-                .HasOne(fm => fm.User)
-                .WithOne(u => u.ModelProfile)
-                .HasForeignKey<FashionModel>(fm => fm.Id)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<TshirtDesigner>()
-                .HasOne(td => td.User)
-                .WithOne(u => u.DesignerProfile)
-                .HasForeignKey<TshirtDesigner>(td => td.Id)
-                .OnDelete(DeleteBehavior.NoAction);
+           
 
             modelBuilder.Entity<ReelProduct>()
                 .HasKey(rp => new { rp.ReelId, rp.ProductId });

@@ -8,11 +8,12 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
 {
     public class Brand
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; }
 
         [Required]
         [StringLength(200)]
         public string OfficialName { get; set; }
+        
 
         [StringLength(1000)]
         public string Description { get; set; }
@@ -29,7 +30,12 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         public string? TaxCardNumber { get; set; }
 
         [Required]
-        public bool IsApproved { get; set; } = false;
+        [StringLength(50)]
+        public string Status { get; set; } = "Pending"; 
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        [StringLength(100)]
+        public string Password { get; set; }
+
 
         [Required]
         [Range(0, 100)]
@@ -40,7 +46,6 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         [StringLength(500)]
         public string EvidenceOfProofUrl { get; set; } 
 
-        public virtual ApplicationUser? User { get; set; }
         public virtual List<Product>? Products { get; set; } = new List<Product>();
         public virtual List<Order>? Orders { get; set; } = new List<Order>();
         public virtual List<Payout>? Payouts { get; set; } = new List<Payout>();

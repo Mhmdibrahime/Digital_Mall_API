@@ -7,14 +7,17 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
 {
     public class FashionModel
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; }
 
+        [StringLength(500)]
+        public string Name { get; set; }
         [Required]
         [StringLength(500)]
         public string Bio { get; set; }
 
         [Required]
-        public bool IsApproved { get; set; } = false;
+        [StringLength(50)]
+        public string Status { get; set; } = "Pending";
 
         [Required]
         [Range(0, 100)]
@@ -23,9 +26,12 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
 
         [Required]
         [StringLength(500)]
-        public string EvidenceOfProofUrl { get; set; } 
+        public string EvidenceOfProofUrl { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        [StringLength(100)]
+        public string Password { get; set; }
 
-        public virtual ApplicationUser? User { get; set; }
+
         public virtual List<Reel>? Reels { get; set; } = new List<Reel>();
         public virtual List<Payout>? Payouts { get; set; } = new List<Payout>();
     }

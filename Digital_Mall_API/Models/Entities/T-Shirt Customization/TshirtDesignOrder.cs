@@ -7,10 +7,10 @@ namespace Digital_Mall_API.Models.Entities.T_Shirt_Customization
 {
     public class TshirtDesignOrder
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
-        public Guid CustomerUserId { get; set; }
+        public string CustomerUserId { get; set; }
 
         [Required]
         [StringLength(50)]
@@ -56,6 +56,6 @@ namespace Digital_Mall_API.Models.Entities.T_Shirt_Customization
         [Required]
         public bool IsPaid { get; set; } = false;
 
-        public virtual ApplicationUser? CustomerUser { get; set; }
+        public virtual Customer? CustomerUser { get; set; }
     }
 }

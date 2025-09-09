@@ -7,7 +7,7 @@ namespace Digital_Mall_API.Models.Entities.Financials
 {
     public class Payout
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
         public Guid PayeeUserId { get; set; }

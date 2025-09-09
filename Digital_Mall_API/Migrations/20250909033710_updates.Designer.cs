@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Digital_Mall_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250903015731_intial")]
-    partial class intial
+    [Migration("20250909033710_updates")]
+    partial class updates
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -27,9 +27,11 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Financials.Payout", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
@@ -39,11 +41,11 @@ namespace Digital_Mall_API.Migrations
                         .HasMaxLength(34)
                         .HasColumnType("nvarchar(34)");
 
-                    b.Property<Guid?>("BrandId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("BrandId")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("FashionModelId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("FashionModelId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<Guid>("PayeeUserId")
                         .HasColumnType("uniqueidentifier");
@@ -72,15 +74,19 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Orders___Shopping.Order", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("BrandId")
-                        .HasColumnType("uniqueidentifier");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("BrandId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsPaid")
                         .HasColumnType("bit");
@@ -137,18 +143,20 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Orders___Shopping.OrderItem", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uniqueidentifier");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("PriceAtTimeOfPurchase")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("ProductVariantId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ProductVariantId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
@@ -164,9 +172,11 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.Category", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -190,15 +200,18 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.Product", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("BrandId")
-                        .HasColumnType("uniqueidentifier");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<Guid>("CategoryId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("BrandId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -224,9 +237,11 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductImage", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("int");
@@ -236,8 +251,8 @@ namespace Digital_Mall_API.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -248,17 +263,19 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductVariant", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Color")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
 
                     b.Property<string>("SKU")
                         .IsRequired()
@@ -287,9 +304,11 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.Reel", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Caption")
                         .HasMaxLength(2000)
@@ -298,14 +317,15 @@ namespace Digital_Mall_API.Migrations
                     b.Property<int>("DurationInSeconds")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("FashionModelId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("FashionModelId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("LikesCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("PostedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("PostedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("PostedDate")
                         .HasColumnType("datetime2");
@@ -331,11 +351,11 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.ReelProduct", b =>
                 {
-                    b.Property<Guid>("ReelId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ReelId")
+                        .HasColumnType("int");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
 
                     b.HasKey("ReelId", "ProductId");
 
@@ -346,9 +366,11 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignOrder", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ChosenColor")
                         .IsRequired()
@@ -370,16 +392,17 @@ namespace Digital_Mall_API.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
-                    b.Property<Guid?>("CustomerId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("CustomerId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("CustomerImageUrl")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<Guid>("CustomerUserId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("CustomerUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("DesignerNotes")
                         .IsRequired()
@@ -426,6 +449,9 @@ namespace Digital_Mall_API.Migrations
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("DisplayName")
                         .HasMaxLength(100)
@@ -490,8 +516,8 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.Brand", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("CommercialRegistrationNumber")
                         .HasMaxLength(100)
@@ -499,6 +525,9 @@ namespace Digital_Mall_API.Migrations
 
                     b.Property<decimal>("CommissionRate")
                         .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -510,9 +539,6 @@ namespace Digital_Mall_API.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
-
                     b.Property<string>("LogoUrl")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -522,6 +548,16 @@ namespace Digital_Mall_API.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("TaxCardNumber")
                         .HasMaxLength(100)
@@ -534,8 +570,21 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.Customer", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
@@ -544,8 +593,8 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.FashionModel", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Bio")
                         .IsRequired()
@@ -555,13 +604,28 @@ namespace Digital_Mall_API.Migrations
                     b.Property<decimal>("CommissionRate")
                         .HasColumnType("decimal(5,2)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("EvidenceOfProofUrl")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
@@ -570,8 +634,26 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.TshirtDesigner", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
@@ -813,7 +895,7 @@ namespace Digital_Mall_API.Migrations
                         .WithMany("Reels")
                         .HasForeignKey("FashionModelId");
 
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.ApplicationUser", "PostedByUser")
+                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.FashionModel", "PostedByUser")
                         .WithMany()
                         .HasForeignKey("PostedByUserId")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -847,57 +929,13 @@ namespace Digital_Mall_API.Migrations
                         .WithMany("DesignOrders")
                         .HasForeignKey("CustomerId");
 
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.ApplicationUser", "CustomerUser")
+                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.Customer", "CustomerUser")
                         .WithMany()
                         .HasForeignKey("CustomerUserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("CustomerUser");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.Brand", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.ApplicationUser", "User")
-                        .WithOne("BrandProfile")
-                        .HasForeignKey("Digital_Mall_API.Models.Entities.User___Authentication.Brand", "Id")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.Customer", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.ApplicationUser", "User")
-                        .WithOne("CustomerProfile")
-                        .HasForeignKey("Digital_Mall_API.Models.Entities.User___Authentication.Customer", "Id")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.FashionModel", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.ApplicationUser", "User")
-                        .WithOne("ModelProfile")
-                        .HasForeignKey("Digital_Mall_API.Models.Entities.User___Authentication.FashionModel", "Id")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.TshirtDesigner", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.ApplicationUser", "User")
-                        .WithOne("DesignerProfile")
-                        .HasForeignKey("Digital_Mall_API.Models.Entities.User___Authentication.TshirtDesigner", "Id")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -978,17 +1016,6 @@ namespace Digital_Mall_API.Migrations
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.Reel", b =>
                 {
                     b.Navigation("LinkedProducts");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.ApplicationUser", b =>
-                {
-                    b.Navigation("BrandProfile");
-
-                    b.Navigation("CustomerProfile");
-
-                    b.Navigation("DesignerProfile");
-
-                    b.Navigation("ModelProfile");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.Brand", b =>

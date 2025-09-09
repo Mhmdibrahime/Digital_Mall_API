@@ -13,10 +13,8 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         [Url]
         [StringLength(500)]
         public string? ProfilePictureUrl { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public virtual Customer? CustomerProfile { get; set; }
-        public virtual Brand? BrandProfile { get; set; }
-        public virtual FashionModel? ModelProfile { get; set; }
-        public virtual TshirtDesigner? DesignerProfile { get; set; }
+        
     }
 }

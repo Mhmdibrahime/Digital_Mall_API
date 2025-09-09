@@ -7,13 +7,13 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
 {
     public class Product
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
-        public Guid BrandId { get; set; }
+        public string BrandId { get; set; }
 
         [Required]
-        public Guid CategoryId { get; set; }
+        public int CategoryId { get; set; }
 
         [Required]
         [StringLength(200)]
