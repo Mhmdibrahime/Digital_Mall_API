@@ -85,7 +85,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     Description = b.Description,
                     LogoUrl = b.LogoUrl,
                     Status = b.Status,
-                    CommissionRate = b.CommissionRate,
+                    CommissionRate = b.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate,
                     CreatedAt = b.CreatedAt,
                     ProductsCount = b.Products.Count,
                     OrdersCount = b.Orders.Count(o => o.Status == "completed" || o.Status == "delivered")
@@ -119,7 +119,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     CommercialRegistrationNumber = b.CommercialRegistrationNumber,
                     TaxCardNumber = b.TaxCardNumber,
                     Status = b.Status,
-                    CommissionRate = b.CommissionRate,
+                    CommissionRate = b.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate,
                     EvidenceOfProofUrl = b.EvidenceOfProofUrl,
                     CreatedAt = b.CreatedAt,
                     ProductsCount = b.Products.Count,
@@ -168,7 +168,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 return NotFound();
             }
 
-            brand.CommissionRate = commissionRate;
+            brand.SpecificCommissionRate = commissionRate;
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Commission rate updated successfully" });

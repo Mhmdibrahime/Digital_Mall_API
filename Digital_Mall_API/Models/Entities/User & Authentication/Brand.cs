@@ -37,10 +37,10 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         public string Password { get; set; }
 
 
-        [Required]
+       
         [Range(0, 100)]
         [Column(TypeName = "decimal(5,2)")]
-        public decimal CommissionRate { get; set; }
+        public decimal? SpecificCommissionRate { get; set; }
 
         [Required]
         [StringLength(500)]

@@ -7,6 +7,7 @@ using Digital_Mall_API.Models.Entities.Financials;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Digital_Mall_API.Models.Entities.Promotions;
 
 namespace Digital_Mall_API.Models.Data
 {
@@ -16,7 +17,7 @@ namespace Digital_Mall_API.Models.Data
         {
         }
 
-        // Your DbSets here...
+     
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Brand> Brands { get; set; }
         public DbSet<FashionModel> FashionModels { get; set; }
@@ -31,6 +32,8 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<ReelProduct> ReelProducts { get; set; }
         public DbSet<TshirtDesignOrder> TshirtDesignOrders { get; set; }
         public DbSet<Payout> Payouts { get; set; }
+        public DbSet<GlobalCommission> GlobalCommission { get; set; }
+        public DbSet<Discount> Discounts { get; set; }  
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

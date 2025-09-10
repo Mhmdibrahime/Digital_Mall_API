@@ -27,8 +27,7 @@ namespace Digital_Mall_API.Models.Entities.Financials
         public string Status { get; set; }
 
         [Required]
-        [StringLength(34, MinimumLength = 8)]
-        [RegularExpression(@"^[A-Z0-9]+$")]
+        [StringLength(100, MinimumLength = 8)]
         public string BankAccountNumber { get; set; }
 
         public virtual ApplicationUser? PayeeUser { get; set; }

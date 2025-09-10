@@ -19,10 +19,11 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         [StringLength(50)]
         public string Status { get; set; } = "Pending";
 
-        [Required]
+        
+
         [Range(0, 100)]
         [Column(TypeName = "decimal(5,2)")]
-        public decimal CommissionRate { get; set; }
+        public decimal? SpecificCommissionRate { get; set; }
 
         [Required]
         [StringLength(500)]

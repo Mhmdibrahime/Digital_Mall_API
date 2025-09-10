@@ -73,7 +73,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     FullName = m.Name,
                     Bio = m.Bio,
                     Status = m.Status,
-                    CommissionRate = m.CommissionRate,
+                    CommissionRate = m.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate,
                     CreatedAt = m.CreatedAt,
                     ReelsCount = m.Reels.Count,
                     TotalLikes = m.Reels.Sum(r => r.LikesCount),
@@ -110,7 +110,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     
                     Bio = m.Bio,
                     Status = m.Status,
-                    CommissionRate = m.CommissionRate,
+                    CommissionRate = m.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate,
                     EvidenceOfProofUrl = m.EvidenceOfProofUrl,
                     CreatedAt = m.CreatedAt,
                     ReelsCount = m.Reels.Count,
@@ -197,7 +197,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 return NotFound();
             }
 
-            model.CommissionRate = commissionRate;
+            model.SpecificCommissionRate = commissionRate;
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Commission rate updated successfully" });

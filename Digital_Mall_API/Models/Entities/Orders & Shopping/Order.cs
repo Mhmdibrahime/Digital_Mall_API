@@ -50,8 +50,10 @@ namespace Digital_Mall_API.Models.Entities.Orders___Shopping
         public string ShippingTrackingNumber { get; set; }
 
         [Required]
-        public bool IsPaid { get; set; }
-
+        [StringLength(20)]
+        public string PaymentStatus { get; set; }
+        [StringLength(5000)]
+        public string Notes { get; set; }
         public virtual Customer? Customer{ get; set; }
         public virtual Brand? Brand { get; set; }
         public virtual List<OrderItem>? OrderItems { get; set; } = new List<OrderItem>();

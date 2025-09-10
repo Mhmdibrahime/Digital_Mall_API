@@ -7,6 +7,10 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
     public class Customer
     {
         public string Id { get; set; }
+        [StringLength(100)]
+        public string FullName { get; set; }
+        [StringLength(100)]
+        public string Email { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         [StringLength(100)]
         public string Password { get; set; }
