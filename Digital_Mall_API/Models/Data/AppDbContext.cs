@@ -130,8 +130,12 @@ namespace Digital_Mall_API.Models.Data
                 .HasForeignKey(p => p.PayeeUserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-        
-           
+
+            modelBuilder.Entity<DesignRequest>()
+       .HasOne(r => r.Designer)
+       .WithMany(u => u.DesignRequests)
+       .HasForeignKey(r => r.DesignerId)
+       .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

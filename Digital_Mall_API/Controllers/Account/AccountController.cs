@@ -28,7 +28,7 @@ namespace Digital_Mall_API.Controllers.Account
         private readonly IOptions<JwtSettings> _jwtSettings;
         private readonly IEmailSender email;
 
-        // اختياري: قائمة بالأدوار المسموح بها لو هتقيّد الاختيار
+        
         private static readonly HashSet<string> AllowedRoles =
             new(StringComparer.OrdinalIgnoreCase) { "User", "BrandAdmin", "DesignerAdmin", "ModelAdmin", "SuperAdmin" };
 
@@ -51,7 +51,7 @@ namespace Digital_Mall_API.Controllers.Account
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto request)
         {
-            // أمان: امنع أدوار غير مسموحة (أو بدّلها بـ "User")
+           
             if (string.IsNullOrWhiteSpace(request.Role)) request.Role = "User";
             if (!AllowedRoles.Contains(request.Role)) return BadRequest("Role is not allowed.");
 
@@ -67,11 +67,9 @@ namespace Digital_Mall_API.Controllers.Account
             if (!createResult.Succeeded)
                 return BadRequest(createResult.Errors);
 
-            // تأكد إن الـ Role موجود، لو مش موجود تقدر تعمله Create أو ترجع BadRequest
+            
             if (!await _roleManager.RoleExistsAsync(request.Role))
             {
-                // لو عايز تمنع إنشاء أدوار تلقائيًا:
-                // return BadRequest("Role does not exist.");
                 await _roleManager.CreateAsync(new IdentityRole<Guid>(request.Role));
             }
 
@@ -89,7 +87,7 @@ namespace Digital_Mall_API.Controllers.Account
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto request)
         {
-            // اسم أو إيميل
+            
             ApplicationUser user = await _userManager.FindByEmailAsync(request.Email);
 
             if (user is null)

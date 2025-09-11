@@ -58,4 +58,5 @@ namespace Digital_Mall_API.Models.Entities.T_Shirt_Customization
 
         public virtual Customer? CustomerUser { get; set; }
     }
+   
 }
