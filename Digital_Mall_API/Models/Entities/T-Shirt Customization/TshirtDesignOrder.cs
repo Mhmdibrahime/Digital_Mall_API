@@ -56,7 +56,8 @@ namespace Digital_Mall_API.Models.Entities.T_Shirt_Customization
         [Required]
         public bool IsPaid { get; set; } = false;
 
+        public DateTime RequestDate { get; set; } = DateTime.UtcNow;
+
         public virtual Customer? CustomerUser { get; set; }
     }
-   
 }
