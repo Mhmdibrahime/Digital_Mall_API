@@ -34,6 +34,10 @@ namespace Digital_Mall_API.Models.Entities.Reels___Content
         [Required]
         [Range(0, int.MaxValue)]
         public int LikesCount { get; set; } = 0;
+
+        [Required]
+        [Range(0, int.MaxValue)]
+        public int SharesCount { get; set; } = 0;
         public virtual FashionModel? PostedByUser { get; set; }
         public virtual List<ReelProduct>? LinkedProducts { get; set; } = new List<ReelProduct>();
     }
