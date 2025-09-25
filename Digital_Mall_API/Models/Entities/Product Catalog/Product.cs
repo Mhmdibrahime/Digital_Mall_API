@@ -13,7 +13,7 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         public string BrandId { get; set; }
 
         [Required]
-        public int CategoryId { get; set; }
+        public int SubCategoryId { get; set; }
 
         [Required]
         [StringLength(200)]
@@ -26,9 +26,9 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         [Range(0, double.MaxValue)]
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
-
+        public bool IsActive { get; set; } = true;
         public virtual Brand? Brand { get; set; }
-        public virtual Category? Category { get; set; }
+        public virtual SubCategory? SubCategory { get; set; }
         public virtual List<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
         public virtual List<ProductImage> Images { get; set; } = new List<ProductImage>();
         public virtual List<ReelProduct> ReelProducts { get; set; } = new List<ReelProduct>();

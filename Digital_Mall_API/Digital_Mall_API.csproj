@@ -7,9 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\BrandAdmin\" />
     <Folder Include="Controllers\ModelAdmin\" />
-    <Folder Include="Models\DTOs\BrandAdminDTOs\" />
     <Folder Include="Models\DTOs\ModelAdminDTOs\" />
   </ItemGroup>
 

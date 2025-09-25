@@ -18,6 +18,6 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         [StringLength(500)]
         public string ImageUrl { get; set; }
 
-        public virtual List<Product>? Products { get; set; } = new List<Product>();
+        public virtual List<SubCategory>? SubCategories { get; set; } = new List<SubCategory>();
     }
 }
