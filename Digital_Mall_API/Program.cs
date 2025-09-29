@@ -17,8 +17,13 @@ namespace Digital_Mall_API
     {
         public static async Task Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
+            var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            if (!Directory.Exists(wwwrootPath))
+            {
+                Directory.CreateDirectory(wwwrootPath);
+            }
 
+            var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddControllers();
 
@@ -37,13 +42,6 @@ namespace Digital_Mall_API
 
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
-          
-
-            var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-            if (!Directory.Exists(wwwrootPath))
-            {
-                Directory.CreateDirectory(wwwrootPath);
-            }
 
             builder.Services.AddAuthentication(options =>
             {
@@ -70,10 +68,8 @@ namespace Digital_Mall_API
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-            // builder.Services.AddSwaggerGen();
             builder.Services.AddSwaggerGen(swagger =>
             {
-
                 swagger.SwaggerDoc("v1", new OpenApiInfo
                 {
                     Version = "v1",
@@ -103,9 +99,8 @@ namespace Digital_Mall_API
                     },
                     new string[] {}
                     }
-                    });
+                });
             });
-
 
             builder.Services.AddCors(options =>
             {
@@ -119,7 +114,6 @@ namespace Digital_Mall_API
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
