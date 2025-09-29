@@ -233,4 +233,6 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             return Ok();
         }
     }
+
+
 }
