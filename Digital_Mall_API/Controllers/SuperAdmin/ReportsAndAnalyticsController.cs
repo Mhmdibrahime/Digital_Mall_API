@@ -94,7 +94,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     PublishDate = r.PostedDate,
                     Likes = r.LikesCount,
                     Shares = r.SharesCount
-                    
+
                 })
                 .ToListAsync();
 
@@ -115,13 +115,13 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
               [FromQuery] string? brandId = null)
         {
             var availableYears = await _context.Orders
-                .Where(o => o.OrderDate.Year >= 2025) 
+                .Where(o => o.OrderDate.Year >= 2025)
                 .Select(o => o.OrderDate.Year)
                 .Distinct()
                 .OrderBy(y => y)
                 .ToListAsync();
 
-           
+
             var availableBrands = await _context.Brands
                 .Where(b => b.Status == "Active")
                 .Select(b => new { b.Id, b.OfficialName })
@@ -129,7 +129,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
             var ordersQuery = _context.Orders
                 .Include(o => o.Brand)
-                .Where(o => o.Status != "Cancelled"); 
+                .Where(o => o.Status != "Cancelled");
 
             if (year.HasValue)
             {
@@ -148,8 +148,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     Year = g.Key.Year,
                     BrandId = g.Key.BrandId,
                     BrandName = g.First().Brand.OfficialName,
-                    Sales = g.Sum(o => o.TotalAmount),
-                    OrderCount = g.Count()
+                    Sales = g.Sum(o => o.TotalAmount)
                 })
                 .OrderBy(s => s.Year)
                 .ThenBy(s => s.BrandName)
@@ -164,11 +163,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     {
                         BrandId = b.BrandId,
                         BrandName = b.BrandName,
-                        Sales = b.Sales,
-                        OrderCount = b.OrderCount
+                        Sales = b.Sales
                     }).ToList(),
                     TotalSales = g.Sum(b => b.Sales),
-                    TotalOrders = g.Sum(b => b.OrderCount)
                 })
                 .OrderBy(g => g.Year)
                 .ToList();
@@ -182,140 +179,157 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 Data = result
             });
         }
-
-        [HttpGet("BrandSalesChart/{year}")]
-        public async Task<IActionResult> GetBrandSalesChartData(int year, [FromQuery] string chartType = "bar")
+        [HttpGet("UserGrowth")]
+        public async Task<IActionResult> GetUserGrowthReport(
+            [FromQuery] int? year = null)
         {
-            // Validate year exists in data
-            var yearExists = await _context.Orders
-                .AnyAsync(o => o.OrderDate.Year == year && o.Status != "Cancelled");
+            var targetYear = year ?? DateTime.UtcNow.Year;
 
-            if (!yearExists)
+            var customerQuery = _context.Customers.Where(c => c.CreatedAt.Year == targetYear);
+            var brandQuery = _context.Brands.Where(b => b.CreatedAt.Year == targetYear && b.Status == "Active");
+            var modelQuery = _context.FashionModels.Where(m => m.CreatedAt.Year == targetYear && m.Status == "Active");
+
+
+            var monthlyGrowth = new List<UserGrowthMonthlyDto>();
+
+            for (int month = 1; month <= 12; month++)
             {
-                return NotFound($"No sales data found for year {year}");
+                var monthData = new UserGrowthMonthlyDto
+                {
+                    Year = targetYear,
+                    Month = month,
+                    MonthName = new DateTime(targetYear, month, 1).ToString("MMM"),
+                    Customers = 0,
+                    Brands = 0,
+                    Models = 0
+                };
+                monthlyGrowth.Add(monthData);
             }
 
-            // Get sales data for the specific year
-            var chartData = await _context.Orders
-                .Include(o => o.Brand)
-                .Where(o => o.OrderDate.Year == year && o.Status != "Cancelled")
-                .GroupBy(o => new { o.BrandId, o.Brand.OfficialName })
-                .Select(g => new
-                {
-                    BrandId = g.Key.BrandId,
-                    BrandName = g.Key.OfficialName,
-                    Sales = g.Sum(o => o.TotalAmount),
-                    OrderCount = g.Count()
-                })
-                .OrderByDescending(x => x.Sales)
+            var customerGrowth = await customerQuery
+                .GroupBy(c => c.CreatedAt.Month)
+                .Select(g => new { Month = g.Key, Count = g.Count() })
                 .ToListAsync();
 
-            var response = new
+            var brandGrowth = await brandQuery
+                .GroupBy(b => b.CreatedAt.Month)
+                .Select(g => new { Month = g.Key, Count = g.Count() })
+                .ToListAsync();
+            var modelGrowth = await modelQuery
+                .GroupBy(m => m.CreatedAt.Month)
+                .Select(g => new { Month = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            foreach (var customerData in customerGrowth)
             {
-                Year = year,
-                ChartType = chartType.ToLower(), // "bar" or "line"
-                Data = chartData,
-                TotalSales = chartData.Sum(d => d.Sales),
-                TotalOrders = chartData.Sum(d => d.OrderCount),
-                ChartTitle = $"{year} - {(chartType.ToLower() == "bar" ? "Brands Bar Chart" : "Brands Line Chart")}"
-            };
+                var monthData = monthlyGrowth.FirstOrDefault(m => m.Month == customerData.Month);
+                if (monthData != null)
+                    monthData.Customers = customerData.Count;
+            }
 
-            return Ok(response);
-        }
+            foreach (var brandData in brandGrowth)
+            {
+                var monthData = monthlyGrowth.FirstOrDefault(m => m.Month == brandData.Month);
+                if (monthData != null)
+                    monthData.Brands = brandData.Count;
+            }
 
-        [HttpGet("BrandSalesSummary")]
-        public async Task<IActionResult> GetBrandSalesSummary()
-        {
-            // Get available years from orders
-            var availableYears = await _context.Orders
-                .Where(o => o.Status != "Cancelled")
-                .Select(o => o.OrderDate.Year)
-                .Distinct()
-                .OrderBy(y => y)
-                .ToListAsync();
+            foreach (var modelData in modelGrowth)
+            {
+                var monthData = monthlyGrowth.FirstOrDefault(m => m.Month == modelData.Month);
+                if (monthData != null)
+                    monthData.Models = modelData.Count;
+            }
 
-            // Get active brands
-            var availableBrands = await _context.Brands
-                .Where(b => b.Status == "Active")
-                .Select(b => new { b.Id, b.OfficialName })
-                .OrderBy(b => b.OfficialName)
-                .ToListAsync();
+            var totalCustomers = monthlyGrowth.Sum(m => m.Customers);
+            var totalBrands = monthlyGrowth.Sum(m => m.Brands);
+            var totalModels = monthlyGrowth.Sum(m => m.Models);
 
-            // Get overall summary
-            var totalSales = await _context.Orders
-                .Where(o => o.Status != "Cancelled")
-                .SumAsync(o => o.TotalAmount);
-
-            var totalOrders = await _context.Orders
-                .Where(o => o.Status != "Cancelled")
-                .CountAsync();
-
-            var totalBrands = availableBrands.Count;
+            var availableYears = await GetAvailableUserYears();
 
             return Ok(new
             {
+                Year = targetYear,
                 AvailableYears = availableYears,
-                AvailableBrands = availableBrands,
-                DefaultYear = availableYears.LastOrDefault(), // Most recent year
-                AllBrandsOption = "All Brands",
+                
                 Summary = new
                 {
-                    TotalSales = totalSales,
-                    TotalOrders = totalOrders,
-                    TotalBrands = totalBrands
-                }
+                    TotalCustomers = totalCustomers,
+                    TotalBrands = totalBrands,
+                    TotalModels = totalModels,
+                    TotalUsers = totalCustomers + totalBrands + totalModels
+                },
+                MonthlyData = monthlyGrowth.OrderBy(m => m.Month).ToList()
             });
         }
 
-        [HttpGet("BrandSalesTrends")]
-        public async Task<IActionResult> GetBrandSalesTrends([FromQuery] string? brandId = null)
+        private async Task<List<int>> GetAvailableUserYears()
         {
-            // Get monthly sales trends for the last 2 years
-            var startDate = DateTime.UtcNow.AddYears(-2);
+            var customerYears = await _context.Customers
+                .Select(c => c.CreatedAt.Year)
+                .Distinct()
+                .ToListAsync();
 
-            var trendsQuery = _context.Orders
-                .Include(o => o.Brand)
-                .Where(o => o.OrderDate >= startDate && o.Status != "Cancelled");
+            var brandYears = await _context.Brands
+                .Select(b => b.CreatedAt.Year)
+                .Distinct()
+                .ToListAsync();
 
-            if (!string.IsNullOrEmpty(brandId))
-            {
-                trendsQuery = trendsQuery.Where(o => o.BrandId == brandId);
-            }
+            var modelYears = await _context.FashionModels
+                .Select(m => m.CreatedAt.Year)
+                .Distinct()
+                .ToListAsync();
 
-            var monthlyTrends = await trendsQuery
-                .GroupBy(o => new {
-                    Year = o.OrderDate.Year,
-                    Month = o.OrderDate.Month,
-                    BrandId = o.BrandId,
-                    BrandName = o.Brand.OfficialName
-                })
+            return customerYears
+                .Union(brandYears)
+                .Union(modelYears)
+                .OrderBy(y => y)
+                .ToList();
+        }
+        [HttpGet("Revenue")]
+        public async Task<IActionResult> GetRevenueReport([FromQuery] int? year = null)
+        {
+            var targetYear = year ?? DateTime.UtcNow.Year;
+
+            var monthlyRevenue = await _context.Orders
+                .Where(o => o.OrderDate.Year == targetYear && o.Status != "Cancelled" && o.PaymentStatus == "Paid")
+                .GroupBy(o => o.OrderDate.Month)
                 .Select(g => new
                 {
-                    Year = g.Key.Year,
-                    Month = g.Key.Month,
-                    BrandId = g.Key.BrandId,
-                    BrandName = g.Key.BrandName,
-                    Sales = g.Sum(o => o.TotalAmount),
-                    Orders = g.Count(),
-                    Period = new DateTime(g.Key.Year, g.Key.Month, 1)
+                    Month = g.Key,
+                    MonthName = new DateTime(targetYear, g.Key, 1).ToString("MMM"),
+                    Revenue = g.Sum(o => o.TotalAmount),
+                    OrderCount = g.Count()
                 })
-                .OrderBy(x => x.Period)
-                .ThenBy(x => x.BrandName)
+                .OrderBy(r => r.Month)
                 .ToListAsync();
+
+            var completeMonthlyData = new List<object>();
+
+            for (int month = 1; month <= 12; month++)
+            {
+                var existingData = monthlyRevenue.FirstOrDefault(m => m.Month == month);
+                if (existingData != null)
+                {
+                    completeMonthlyData.Add(existingData);
+                }
+                else
+                {
+                    completeMonthlyData.Add(new
+                    {
+                        Month = month,
+                        MonthName = new DateTime(targetYear, month, 1).ToString("MMM"),
+                        Revenue = 0m,
+                        OrderCount = 0
+                    });
+                }
+            }
 
             return Ok(new
             {
-                StartDate = startDate,
-                EndDate = DateTime.UtcNow,
-                BrandFilter = brandId,
-                Trends = monthlyTrends
+                Year = targetYear,
+                MonthlyData = completeMonthlyData
             });
         }
-
-
-
-
-
-
     }
 }
