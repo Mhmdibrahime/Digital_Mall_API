@@ -35,7 +35,7 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<GlobalCommission> GlobalCommission { get; set; }
         public DbSet<Discount> Discounts { get; set; }
         public DbSet<TshirtDesignSubmission> TshirtDesignSubmissions { get; set; }
-
+        public DbSet<SubCategory> SubCategories { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -82,9 +82,9 @@ namespace Digital_Mall_API.Models.Data
                 .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Product>()
-                .HasOne(p => p.Category)
+                .HasOne(p => p.SubCategory)
                 .WithMany(c => c.Products)
-                .HasForeignKey(p => p.CategoryId)
+                .HasForeignKey(p => p.SubCategoryId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<ProductVariant>()
@@ -131,7 +131,10 @@ namespace Digital_Mall_API.Models.Data
                 .HasForeignKey(p => p.PayeeUserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-
+            modelBuilder.Entity<Category>()
+                .HasMany(c => c.SubCategories)
+                .WithOne(sc => sc.Category)
+                .HasForeignKey(sc => sc.CategoryId);
         }
     }
 }
