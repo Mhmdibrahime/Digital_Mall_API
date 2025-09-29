@@ -34,6 +34,9 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<Payout> Payouts { get; set; }
         public DbSet<GlobalCommission> GlobalCommission { get; set; }
         public DbSet<Discount> Discounts { get; set; }
+        public DbSet<ProductDiscount> ProductDiscounts { get; set; }
+        public DbSet<PromoCode> PromoCodes { get; set; }
+        public DbSet<PromoCodeUsage> PromoCodeUsages { get; set; }
         public DbSet<TshirtDesignSubmission> TshirtDesignSubmissions { get; set; }
         public DbSet<SubCategory> SubCategories { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)

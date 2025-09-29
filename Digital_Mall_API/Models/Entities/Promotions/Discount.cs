@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Digital_Mall_API.Models.Entities.Promotions
 {
@@ -20,4 +19,5 @@ namespace Digital_Mall_API.Models.Entities.Promotions
         public DateTime? EndDate { get; set; }
 
     }
+    
 }

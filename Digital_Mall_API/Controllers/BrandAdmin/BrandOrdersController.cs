@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 namespace Digital_Mall_API.Controllers.BrandAdmin
 {
-    [Route("Brand/Mangment/[controller]")]
+    [Route("Brand/Management/[controller]")]
     [ApiController]
     public class BrandOrdersController : ControllerBase
     {

@@ -9,7 +9,7 @@ using System.Security.Claims;
 namespace Digital_Mall_API.Controllers.BrandAdmin
 {
     [ApiController]
-    [Route("Brand/Mangment/[controller]")]
+    [Route("Brand/Management/[controller]")]
     public class ProductsController : ControllerBase
     {
         private readonly AppDbContext _context;

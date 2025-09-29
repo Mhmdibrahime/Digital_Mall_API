@@ -13,6 +13,10 @@ namespace Digital_Mall_API.Models.Entities.Financials
         public Guid PayeeUserId { get; set; }
 
         [Required]
+        [StringLength(50)]
+        public string PayoutId { get; set; } 
+
+        [Required]
         [Range(0.01, double.MaxValue)]
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
@@ -24,11 +28,18 @@ namespace Digital_Mall_API.Models.Entities.Financials
 
         [Required]
         [StringLength(20)]
-        public string Status { get; set; }
+        public string Status { get; set; } = "Pending"; 
 
         [Required]
-        [StringLength(100, MinimumLength = 8)]
+        [StringLength(50)]
+        public string Method { get; set; } 
+
+        [Required]
+        [StringLength(100)]
         public string BankAccountNumber { get; set; }
+
+        [StringLength(500)]
+        public string? Notes { get; set; }
 
         public virtual ApplicationUser? PayeeUser { get; set; }
     }
