@@ -13,12 +13,20 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         [Required]
         [StringLength(200)]
         public string OfficialName { get; set; }
-        
 
+        [StringLength(200)]
+        public string? Facebook { get; set; }
+        [StringLength(200)]
+        public string? Instgram { get; set; }
+
+        public bool Online { get; set; }
+        public bool Ofline { get; set; }
+      
         [StringLength(1000)]
+
         public string? Description { get; set; }
 
-        [Required]
+      
         [Url]
         [StringLength(500)]
         public string? LogoUrl { get; set; }
@@ -37,7 +45,7 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         public string Password { get; set; }
 
         [StringLength(5000)]
-        public  string ReturnPolicy { get; set; }
+        public  string? ReturnPolicy { get; set; }
 
         [Range(0, 100)]
         [Column(TypeName = "decimal(5,2)")]

@@ -14,6 +14,8 @@ using EmailService;
 using Microsoft.AspNetCore.WebUtilities;
 using Restaurant_App.Models.DTO;
 using Microsoft.AspNetCore.Authorization;
+using Digital_Mall_API.Services;
+using Digital_Mall_API.Models.Data;
 
 namespace Digital_Mall_API.Controllers.Account
 {
@@ -27,8 +29,8 @@ namespace Digital_Mall_API.Controllers.Account
         private readonly IConfiguration _config;
         private readonly IOptions<JwtSettings> _jwtSettings;
         private readonly IEmailSender email;
-
-        
+        private readonly AppDbContext _context;
+        private readonly FileService _fileService;
         private static readonly HashSet<string> AllowedRoles =
             new(StringComparer.OrdinalIgnoreCase) { "User", "BrandAdmin", "DesignerAdmin", "ModelAdmin", "SuperAdmin" };
 
@@ -38,7 +40,9 @@ namespace Digital_Mall_API.Controllers.Account
             RoleManager<IdentityRole<Guid>> roleManager,
             IConfiguration config,
              IOptions<JwtSettings> jwtSettings,
-             IEmailSender email)
+             IEmailSender email,
+            AppDbContext context,
+            FileService fileservice)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -46,52 +50,148 @@ namespace Digital_Mall_API.Controllers.Account
             _config = config;
             _jwtSettings = jwtSettings;
             this.email = email;
+            _context = context;
+            _fileService = fileservice;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterDto request)
+        [HttpPost("register-customer")]
+        public async Task<IActionResult> RegisterCustomer([FromForm] RegisterCustomerDto dto)
         {
-           
-            if (string.IsNullOrWhiteSpace(request.Role)) request.Role = "User";
-            if (!AllowedRoles.Contains(request.Role)) return BadRequest("Role is not allowed.");
+            if (dto.Password != dto.ConfirmPassword)
+                return BadRequest("Passwords do not match.");
 
             var user = new ApplicationUser
             {
-                DisplayName=request.FirstName+request.LastName,
-                UserName = request.Username,
-                Email = request.Email,
-                PhoneNumber=request.MobileNumber
+                UserName = dto.Email,
+                Email = dto.Email,
+                PhoneNumber = dto.MobileNumber,
+                DisplayName = dto.FullName
             };
 
-            var createResult = await _userManager.CreateAsync(user, request.Password);
-            if (!createResult.Succeeded)
-                return BadRequest(createResult.Errors);
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded) return BadRequest(result.Errors);
 
-            
-            if (!await _roleManager.RoleExistsAsync(request.Role))
+            if (!await _roleManager.RoleExistsAsync("Customer"))
+                await _roleManager.CreateAsync(new IdentityRole<Guid>("Customer"));
+
+            await _userManager.AddToRoleAsync(user, "Customer");
+
+            var customer = new Customer
             {
-                await _roleManager.CreateAsync(new IdentityRole<Guid>(request.Role));
-            }
+                Id = user.Id.ToString(), 
+                FullName = dto.FullName,
+                Email = dto.Email,
+                Password = dto.Password, 
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow
+            };
 
-            var roleResult = await _userManager.AddToRoleAsync(user, request.Role);
-            if (!roleResult.Succeeded)
-                return BadRequest(roleResult.Errors);
+            _context.Customers.Add(customer);
+            await _context.SaveChangesAsync();
 
+            return Ok(new { message = "Customer account created successfully." });
+        }
 
-            return Ok(new
+        
+        [HttpPost("register-brand")]
+        public async Task<IActionResult> RegisterBrand([FromForm] RegisterBrandDto dto)
+        {
+            if (dto.Password != dto.ConfirmPassword)
+                return BadRequest("Passwords do not match.");
+
+            var user = new ApplicationUser
             {
-                message = $"{request.Role} account created successfully.",
-            });
+                UserName = dto.Email,
+                Email = dto.Email
+            };
+
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded) return BadRequest(result.Errors);
+
+            if (!await _roleManager.RoleExistsAsync("Brand"))
+                await _roleManager.CreateAsync(new IdentityRole<Guid>("Brand"));
+
+            await _userManager.AddToRoleAsync(user, "Brand");
+
+            var brand = new Brand
+            {
+                Id = user.Id.ToString(), 
+                OfficialName = dto.OfficialName,
+                Facebook = dto.Facebook,
+                Instgram = dto.Instgram,
+                Online = dto.Online,
+                Ofline = dto.Ofline,
+                Password = dto.Password, 
+                EvidenceOfProofUrl = await _fileService.SaveFileAsync(dto.EvidenceOfProof, "BrandProofs"),
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Brands.Add(brand);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Brand account created successfully. Waiting for admin approval." });
+        }
+
+       
+        [HttpPost("register-model")]
+        public async Task<IActionResult> RegisterModel([FromForm] RegisterModelDto dto)
+        {
+            if (dto.Password != dto.ConfirmPassword)
+                return BadRequest("Passwords do not match.");
+
+            var user = new ApplicationUser
+            {
+                UserName = dto.Email,
+                Email = dto.Email,
+                PhoneNumber = dto.PhoneNumber
+            };
+
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded) return BadRequest(result.Errors);
+
+            if (!await _roleManager.RoleExistsAsync("FashionModel"))
+                await _roleManager.CreateAsync(new IdentityRole<Guid>("FashionModel"));
+
+            await _userManager.AddToRoleAsync(user, "FashionModel");
+
+            var model = new FashionModel
+            {
+                Id = user.Id.ToString(), 
+                Name = dto.ModelName,
+                Password = dto.Password, 
+                EvidenceOfProofUrl = await _fileService.SaveFileAsync(dto.PersonalProof, "ModelProofs"),
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.FashionModels.Add(model);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Model account created successfully. Waiting for admin approval." });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto request)
         {
-            
-            ApplicationUser user = await _userManager.FindByEmailAsync(request.Email);
-
+            var user = await _userManager.FindByEmailAsync(request.Email);
             if (user is null)
                 return Unauthorized("Invalid credentials.");
+
+            
+            var brand = await _context.Brands.FindAsync(user.Id);
+            if (brand != null && brand.Status != "Active")
+                return Unauthorized("Your account is not yet approved by admin.");
+
+            
+            var model = await _context.FashionModels.FindAsync(user.Id);
+            if (model != null && model.Status != "Active")
+                return Unauthorized("Your account is not yet approved by admin.");
+
+            
+            var customer = await _context.Customers.FindAsync(user.Id);
+            if (customer != null && customer.Status != "Active")
+                return Unauthorized("Your account is not active.");
 
             var check = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
             if (!check.Succeeded)

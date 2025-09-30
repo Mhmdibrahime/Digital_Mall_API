@@ -2,6 +2,7 @@ using Digital_Mall_API.Models;
 using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.Entities.User___Authentication;
 using Digital_Mall_API.Seed;
+using Digital_Mall_API.Services;
 using EmailService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -38,6 +39,7 @@ namespace Digital_Mall_API
             builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
+            builder.Services.AddScoped<FileService>();
 
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
