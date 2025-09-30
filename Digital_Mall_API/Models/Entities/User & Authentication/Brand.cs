@@ -16,12 +16,12 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         
 
         [StringLength(1000)]
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
         [Required]
         [Url]
         [StringLength(500)]
-        public string LogoUrl { get; set; }
+        public string? LogoUrl { get; set; }
 
         [StringLength(100)]
         public string? CommercialRegistrationNumber { get; set; }
@@ -36,8 +36,9 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         [StringLength(100)]
         public string Password { get; set; }
 
+        [StringLength(5000)]
+        public  string ReturnPolicy { get; set; }
 
-       
         [Range(0, 100)]
         [Column(TypeName = "decimal(5,2)")]
         public decimal? SpecificCommissionRate { get; set; }

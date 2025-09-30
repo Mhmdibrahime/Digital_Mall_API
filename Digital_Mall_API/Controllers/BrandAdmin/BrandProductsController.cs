@@ -10,12 +10,12 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 {
     [ApiController]
     [Route("Brand/Management/[controller]")]
-    public class ProductsController : ControllerBase
+    public class BrandProductsController : ControllerBase
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _env;
 
-        public ProductsController(AppDbContext context, IWebHostEnvironment env)
+        public BrandProductsController(AppDbContext context, IWebHostEnvironment env)
         {
             _context = context;
             _env = env;

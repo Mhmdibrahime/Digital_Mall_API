@@ -30,6 +30,7 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
 
         public bool IsActive { get; set; } = true;
 
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int? DiscountId { get; set; }
 
         public virtual Brand? Brand { get; set; }

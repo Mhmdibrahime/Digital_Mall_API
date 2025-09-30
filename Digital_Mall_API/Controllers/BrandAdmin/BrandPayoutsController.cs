@@ -10,11 +10,11 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 {
     [Route("Brand/[controller]")]
     [ApiController]
-    public class PayoutsController : ControllerBase
+    public class BrandPayoutsController : ControllerBase
     {
         private readonly AppDbContext _context;
 
-        public PayoutsController(AppDbContext context)
+        public BrandPayoutsController(AppDbContext context)
         {
             _context = context;
         }
