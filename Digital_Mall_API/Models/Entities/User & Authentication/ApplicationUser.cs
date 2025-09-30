@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Digital_Mall_API.Models.Entities.User___Authentication
 {
-    public class ApplicationUser : IdentityUser<Guid>
+    public class ApplicationUser : IdentityUser
     {
         [StringLength(100)]
         public string? DisplayName { get; set; }

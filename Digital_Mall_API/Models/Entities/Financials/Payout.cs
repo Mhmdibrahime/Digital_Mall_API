@@ -10,7 +10,7 @@ namespace Digital_Mall_API.Models.Entities.Financials
         public int Id { get; set; }
 
         [Required]
-        public Guid PayeeUserId { get; set; }
+        public string PayeeUserId { get; set; }
 
         [Required]
         [StringLength(50)]

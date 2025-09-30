@@ -27,8 +27,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
         private async Task<Guid?> GetBrandUserIdAsync(string brandId)
         {
-            var brandUser = await _context.Users.FirstOrDefaultAsync(u => u.Id.ToString() == brandId);
-            return brandUser?.Id;
+            var brandUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == brandId);
+            return Guid.Parse(brandUser?.Id);
         }
 
 
@@ -49,13 +49,13 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             var brandUserId = await GetBrandUserIdAsync(brandId);
             var totalPaidOut = brandUserId.HasValue
                 ? await _context.Payouts
-                    .Where(p => p.PayeeUserId == brandUserId.Value && p.Status == "Completed")
+                    .Where(p => p.PayeeUserId == brandUserId.Value.ToString() && p.Status == "Completed")
                     .SumAsync(p => p.Amount)
                 : 0;
 
             var pendingPayments = brandUserId.HasValue
                 ? await _context.Payouts
-                    .Where(p => p.PayeeUserId == brandUserId.Value && (p.Status == "Approved" || p.Status == "Pending"))
+                    .Where(p => p.PayeeUserId == brandUserId.Value.ToString() && (p.Status == "Approved" || p.Status == "Pending"))
                     .SumAsync(p => p.Amount)
                 : 0;
 
@@ -95,7 +95,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
             var query = _context.Payouts
                 .Include(p => p.PayeeUser)
-                .Where(p => p.PayeeUserId == brandUserId.Value)
+                .Where(p => p.PayeeUserId == brandUserId.Value.ToString())
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(status) && status != "All")
@@ -163,7 +163,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
             var payout = await _context.Payouts
                 .Include(p => p.PayeeUser)
-                .FirstOrDefaultAsync(p => p.Id == id && p.PayeeUserId == brandUserId.Value);
+                .FirstOrDefaultAsync(p => p.Id == id && p.PayeeUserId == brandUserId.Value.ToString());
 
             if (payout == null)
             {
@@ -222,7 +222,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             var payout = new Payout
             {
                 PayoutId = payoutId,
-                PayeeUserId = brandUserId.Value,
+                PayeeUserId = brandUserId.Value.ToString(),
                 Amount = createPayoutDto.Amount,
                 RequestDate = DateTime.UtcNow,
                 Status = "Pending",
@@ -300,7 +300,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             var brandUserId = await GetBrandUserIdAsync(brandId);
             var totalPaidOut = brandUserId.HasValue
                 ? await _context.Payouts
-                    .Where(p => p.PayeeUserId == brandUserId.Value && p.Status == "Completed")
+                    .Where(p => p.PayeeUserId == brandUserId.Value.ToString() && p.Status == "Completed")
                     .SumAsync(p => p.Amount)
                 : 0;
 

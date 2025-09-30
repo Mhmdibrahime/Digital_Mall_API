@@ -80,7 +80,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 .Take(pageSize)
                 .Select(b => new BrandDto
                 {
-                    Id = b.Id,
+                    Id = b.Id.ToString(),
                     OfficialName = b.OfficialName,
                     Description = b.Description,
                     LogoUrl = b.LogoUrl,
@@ -110,7 +110,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             var brand = await _context.Brands
                 .Select(b => new BrandDetailDto
                 {
-                    Id = b.Id,
+                    Id = b.Id.ToString(),
                     OfficialName = b.OfficialName,
                     Description = b.Description,
                     Email = user.Email,

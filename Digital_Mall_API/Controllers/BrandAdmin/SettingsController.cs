@@ -37,7 +37,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             }
             var user = await _userManager.FindByIdAsync(brandId);
             var brand = await _context.Brands
-                .Where(b => b.Id == brandId)
+                .Where(b => b.Id.ToString() == brandId)
                 .Select(b => new BrandProfileDto
                 {
                     BrandName = b.OfficialName,

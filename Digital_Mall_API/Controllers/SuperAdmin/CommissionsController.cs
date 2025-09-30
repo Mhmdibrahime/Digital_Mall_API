@@ -93,7 +93,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 .Take(pageSize)
                 .Select(b => new BrandCommissionDto
                 {
-                    Id = b.Id,
+                    Id = b.Id.ToString(),
                     Name = b.OfficialName,
                     EffectiveCommissionRate = GetEffectiveCommissionRate(b.SpecificCommissionRate, globalRate),
                     
@@ -135,7 +135,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 .Take(pageSize)
                 .Select(m => new ModelCommissionDto
                 {
-                    Id = m.Id,
+                    Id = m.Id.ToString(),
                     Name = m.Name,
                     EffectiveCommissionRate = GetEffectiveCommissionRate(m.SpecificCommissionRate, globalRate),
                    

@@ -11,7 +11,7 @@ using Digital_Mall_API.Models.Entities.Promotions;
 
 namespace Digital_Mall_API.Models.Data
 {
-    public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
+    public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole ,string>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {

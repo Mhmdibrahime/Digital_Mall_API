@@ -4,7 +4,7 @@
     {
         public int Id { get; set; }
         public string PayoutId { get; set; } = string.Empty;
-        public Guid PayeeUserId { get; set; }
+        public string PayeeUserId { get; set; }
         public string PayeeName { get; set; } = string.Empty;
         public string PayeeEmail { get; set; } = string.Empty;
         public string PayeeType { get; set; } = string.Empty;

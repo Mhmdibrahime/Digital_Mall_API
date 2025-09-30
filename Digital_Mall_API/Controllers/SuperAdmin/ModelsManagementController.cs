@@ -69,7 +69,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 .Take(pageSize)
                 .Select(m => new ModelDto
                 {
-                    Id = m.Id,
+                    Id = m.Id.ToString(),
                     FullName = m.Name,
                     Bio = m.Bio,
                     Status = m.Status,
@@ -80,7 +80,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     TotalEarnings = m.Payouts
                         .Where(p => p.Status == "Completed")
                         .Sum(p => (decimal?)p.Amount) ?? 0m,
-                    PerformanceScore = CalculatePerformanceScore(m.Id, m.Reels.Sum(r => r.LikesCount))
+                    PerformanceScore = CalculatePerformanceScore(m.Id.ToString(), m.Reels.Sum(r => r.LikesCount))
                 })
                 .ToListAsync();
 
@@ -103,7 +103,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 .Include(m => m.Payouts)
                 .Select(m => new ModelDetailDto
                 {
-                    Id = m.Id,
+                    Id = m.Id.ToString(),
                     FullName = m.Name,
                     Email = user.Email ?? "Not Found",
                     Phone = user.PhoneNumber ?? "Not Found",
@@ -122,7 +122,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     PendingEarnings = m.Payouts
                         .Where(p => p.Status == "Pending")
                         .Sum(p => (decimal?)p.Amount) ?? 0m,
-                    PerformanceScore = CalculatePerformanceScore(m.Id, m.Reels.Sum(r => r.LikesCount))                   
+                    PerformanceScore = CalculatePerformanceScore(m.Id.ToString(), m.Reels.Sum(r => r.LikesCount))                   
                    
                 })
                 .FirstOrDefaultAsync(m => m.Id == id);
@@ -207,7 +207,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         public async Task<IActionResult> DeleteModel(string id)
         {
             var model = await _context.FashionModels
-                .FirstOrDefaultAsync(m => m.Id == id);
+                .FirstOrDefaultAsync(m => m.Id.ToString() == id);
 
             if (model == null)
             {

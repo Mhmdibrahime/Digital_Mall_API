@@ -45,7 +45,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 .Take(pageSize)
                 .Select(m => new ModelReelsSummaryDto
                 {
-                    Id = m.Id,
+                    Id = m.Id.ToString(),
                     Name = m.Name,
                     JoinDate = m.CreatedAt,
                     TotalReels = m.Reels.Count,
@@ -71,7 +71,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             [FromQuery] int pageSize = 20)
         {
             var model = await _context.FashionModels
-                .FirstOrDefaultAsync(m => m.Id == modelId);
+                .FirstOrDefaultAsync(m => m.Id.ToString() == modelId);
 
             if (model == null)
             {

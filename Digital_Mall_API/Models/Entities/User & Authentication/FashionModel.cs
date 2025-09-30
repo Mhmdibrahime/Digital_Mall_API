@@ -35,5 +35,7 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
 
         public virtual List<Reel>? Reels { get; set; } = new List<Reel>();
         public virtual List<Payout>? Payouts { get; set; } = new List<Payout>();
+        [ForeignKey("Id")]
+        public ApplicationUser User { get; set; }
     }
 }

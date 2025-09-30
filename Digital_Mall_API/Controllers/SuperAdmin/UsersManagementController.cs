@@ -51,7 +51,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 .AsQueryable();
 
             var userQuery = from customer in query
-                            join user in _context.Users on customer.Id equals user.Id.ToString()
+                            join user in _context.Users on customer.Id equals user.Id
                             select new { Customer = customer, User = user };
 
             if (!string.IsNullOrEmpty(search))
@@ -106,8 +106,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             var customerId = id.ToString();
 
             var result = await (from customer in _context.Customers
-                                where customer.Id == customerId
-                                join user in _context.Users on customer.Id equals user.Id.ToString()
+                                where customer.Id.ToString() == customerId
+                                join user in _context.Users on customer.Id equals user.Id
                                 select new UserDetailDto
                                 {
                                     Id = user.Id,
@@ -197,7 +197,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             var customer = await _context.Customers
                 .Include(c => c.Orders)
                 .Include(c => c.DesignOrders)
-                .FirstOrDefaultAsync(c => c.Id == customerId);
+                .FirstOrDefaultAsync(c => c.Id.ToString() == customerId);
 
             if (customer == null)
             {
