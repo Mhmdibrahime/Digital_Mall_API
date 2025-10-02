@@ -39,6 +39,9 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<PromoCodeUsage> PromoCodeUsages { get; set; }
         public DbSet<TshirtDesignSubmission> TshirtDesignSubmissions { get; set; }
         public DbSet<SubCategory> SubCategories { get; set; }
+        public DbSet<TshirtTemplate> TshirtTemplates { get; set; }
+        public DbSet<TShirtSize> TShirtSizes { get; set; }
+        public DbSet<TShirtStyle> TShirtStyles { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
