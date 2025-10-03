@@ -32,7 +32,7 @@ namespace Digital_Mall_API.Controllers.Account
         private readonly AppDbContext _context;
         private readonly FileService _fileService;
         private static readonly HashSet<string> AllowedRoles =
-            new(StringComparer.OrdinalIgnoreCase) { "User", "BrandAdmin", "DesignerAdmin", "ModelAdmin", "SuperAdmin" };
+            new(StringComparer.OrdinalIgnoreCase) { "User", "Brand", "Designer", "Model", "Super" };
 
         public AccountController(
             UserManager<ApplicationUser> userManager,

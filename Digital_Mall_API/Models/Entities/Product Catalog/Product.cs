@@ -29,7 +29,7 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         public decimal Price { get; set; }
 
         public bool IsActive { get; set; } = true;
-
+        public bool IsTrend { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int? DiscountId { get; set; }
 
