@@ -1,6 +1,7 @@
 ﻿using Digital_Mall_API.Models.Entities.Financials;
 using Digital_Mall_API.Models.Entities.Orders___Shopping;
 using Digital_Mall_API.Models.Entities.Product_Catalog;
+using Digital_Mall_API.Models.Entities.Reels___Content;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -58,5 +59,7 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         public virtual List<Product>? Products { get; set; } = new List<Product>();
         public virtual List<Order>? Orders { get; set; } = new List<Order>();
         public virtual List<Payout>? Payouts { get; set; } = new List<Payout>();
+        public virtual List<Reel>? Reels { get; set; } = new List<Reel>();
+
     }
 }

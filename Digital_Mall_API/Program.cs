@@ -1,8 +1,8 @@
-using Digital_Mall_API.Models;
+﻿using Digital_Mall_API.Models;
 using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.Entities.User___Authentication;
 using Digital_Mall_API.Seed;
-using Digital_Mall_API.Services;
+using Digital_Mall_API.Services; 
 using EmailService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -36,6 +36,9 @@ namespace Digital_Mall_API
                 options.UseSqlServer(builder.Configuration.GetConnectionString("constr")));
 
             builder.Services.AddScoped<IEmailSender, EmailSender>();
+
+            builder.Services.AddScoped<IMuxService, MuxService>();
+
             builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
@@ -66,7 +69,13 @@ namespace Digital_Mall_API
                 };
             });
 
-            // Swagger/OpenAPI configuration
+            builder.Services.AddHttpClient("MuxClient", client =>
+            {
+                client.BaseAddress = new Uri("https://api.mux.com/");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(swagger =>
             {
@@ -77,7 +86,6 @@ namespace Digital_Mall_API
                     Description = "ITI Project - Digital Mall Web API"
                 });
 
-                // Add XML comments
                 var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 if (File.Exists(xmlPath))
@@ -85,7 +93,6 @@ namespace Digital_Mall_API
                     swagger.IncludeXmlComments(xmlPath);
                 }
 
-                // JWT Bearer configuration
                 swagger.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
                 {
                     Name = "Authorization",
@@ -122,8 +129,6 @@ namespace Digital_Mall_API
                     policy.AllowAnyOrigin()
                           .AllowAnyMethod()
                           .AllowAnyHeader();
-                         
-                    
                 });
             });
 
@@ -153,13 +158,13 @@ namespace Digital_Mall_API
             // Configure the HTTP request pipeline
             if (app.Environment.IsDevelopment())
             {
-                app.UseDeveloperExceptionPage(); // Detailed errors in development
+                app.UseDeveloperExceptionPage();
 
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Digital Mall API V1");
-                    c.RoutePrefix = "swagger"; // Access swagger at /swagger
+                    c.RoutePrefix = "swagger";
                     c.ConfigObject.AdditionalItems["syntaxHighlight"] = new Dictionary<string, object>
                     {
                         ["activated"] = false
@@ -169,7 +174,6 @@ namespace Digital_Mall_API
             }
             else
             {
-                // Production swagger configuration
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
@@ -181,13 +185,16 @@ namespace Digital_Mall_API
             app.UseStaticFiles();
             app.UseRouting();
 
-            app.UseCors("AllowAll"); 
+            app.UseCors("AllowAll");
             app.UseHttpsRedirection();
 
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
+
+            // ✅ ADD HEALTH CHECK
+            app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }));
 
             // Seed admin user
             try
@@ -203,6 +210,4 @@ namespace Digital_Mall_API
             app.Run();
         }
     }
-
-   
 }

@@ -179,17 +179,17 @@ namespace Digital_Mall_API.Controllers.Account
                 return Unauthorized("Invalid credentials.");
 
             
-            var brand = await _context.Brands.FindAsync(user.Id);
+            var brand = await _context.Brands.FindAsync(user.Id.ToString());
             if (brand != null && brand.Status != "Active")
                 return Unauthorized("Your account is not yet approved by admin.");
 
             
-            var model = await _context.FashionModels.FindAsync(user.Id);
+            var model = await _context.FashionModels.FindAsync(user.Id.ToString());
             if (model != null && model.Status != "Active")
                 return Unauthorized("Your account is not yet approved by admin.");
 
             
-            var customer = await _context.Customers.FindAsync(user.Id);
+            var customer = await _context.Customers.FindAsync(user.Id.ToString());
             if (customer != null && customer.Status != "Active")
                 return Unauthorized("Your account is not active.");
 

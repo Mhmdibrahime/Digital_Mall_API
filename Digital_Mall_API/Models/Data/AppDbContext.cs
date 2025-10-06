@@ -118,12 +118,19 @@ namespace Digital_Mall_API.Models.Data
                 .WithMany(pv => pv.OrderItems)
                 .HasForeignKey(oi => oi.ProductVariantId)
                 .OnDelete(DeleteBehavior.NoAction);
+            modelBuilder.Entity<Reel>()
+                   .HasOne(r => r.PostedByBrand)
+                   .WithMany(b => b.Reels)
+                   .HasForeignKey(r => r.PostedByUserId)
+                   .OnDelete(DeleteBehavior.NoAction)
+                   .HasConstraintName("FK_Reels_Brands_PostedByUserId");
 
             modelBuilder.Entity<Reel>()
-                .HasOne(r => r.PostedByUser)
-                .WithMany()
+                .HasOne(r => r.PostedByFashionModel)
+                .WithMany(f => f.Reels)
                 .HasForeignKey(r => r.PostedByUserId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_Reels_FashionModels_PostedByUserId");
 
             modelBuilder.Entity<TshirtDesignOrder>()
                 .HasOne(t => t.CustomerUser)

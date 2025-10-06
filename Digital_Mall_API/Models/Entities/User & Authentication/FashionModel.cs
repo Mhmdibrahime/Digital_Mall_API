@@ -11,9 +11,9 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
 
         [StringLength(500)]
         public string Name { get; set; }
-        [Required]
+        
         [StringLength(500)]
-        public string Bio { get; set; }
+        public string? Bio { get; set; }
 
         [Required]
         [StringLength(50)]
