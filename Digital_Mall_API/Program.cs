@@ -111,18 +111,19 @@ namespace Digital_Mall_API
                     }
                 });
 
-                // Additional settings to handle potential issues
                 swagger.CustomSchemaIds(x => x.FullName);
                 swagger.DescribeAllParametersInCamelCase();
             });
 
             builder.Services.AddCors(options =>
             {
-                options.AddDefaultPolicy(policy =>
+                options.AddPolicy("AllowAll", policy =>
                 {
                     policy.AllowAnyOrigin()
                           .AllowAnyMethod()
                           .AllowAnyHeader();
+                         
+                    
                 });
             });
 
@@ -178,7 +179,9 @@ namespace Digital_Mall_API
             }
 
             app.UseStaticFiles();
-            app.UseCors();
+            app.UseRouting();
+
+            app.UseCors("AllowAll"); 
             app.UseHttpsRedirection();
 
             app.UseAuthentication();
