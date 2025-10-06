@@ -1,11 +1,12 @@
 ﻿using Digital_Mall_API.Models.Data;
-using Digital_Mall_API.Models.Entities.User___Authentication;
+using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.ModelsManagementDTOs;
+using Digital_Mall_API.Models.Entities.Financials;
 using Digital_Mall_API.Models.Entities.Reels___Content;
+using Digital_Mall_API.Models.Entities.User___Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
-using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.ModelsManagementDTOs;
 
 namespace Digital_Mall_API.Controllers.SuperAdmin
 {
@@ -19,7 +20,20 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         {
             _context = context;
         }
+        private void GlobalCommissionRate()
+        {
+            var globalCommission = _context.GlobalCommission.FirstOrDefault();
+            if (globalCommission == null)
+            {
+                globalCommission = new GlobalCommission
+                {
+                    CommissionRate = 10m
+                };
 
+                _context.GlobalCommission.Add(globalCommission);
+                _context.SaveChanges();
+            }
+        }
         [HttpGet("Summary")]
         public async Task<IActionResult> GetModelsSummary()
         {
@@ -44,6 +58,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
+            GlobalCommissionRate();
             var query = _context.FashionModels
                 
                 .AsQueryable();

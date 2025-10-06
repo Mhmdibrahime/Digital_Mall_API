@@ -6,7 +6,7 @@ namespace Digital_Mall_API.Models.Entities.Financials
     public class GlobalCommission
     {
         [Key]
-        public int Id { get; set; } = 1; 
+        public int Id { get; set; }
 
         [Required]
         [Range(0, 100)]

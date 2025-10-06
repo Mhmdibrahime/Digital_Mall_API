@@ -1,5 +1,6 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.BrandsManagementDTOs;
+using Digital_Mall_API.Models.Entities.Financials;
 using Digital_Mall_API.Models.Entities.User___Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +36,21 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 SuspendedBrands = suspendedBrands
             });
         }
+        
+        private void GlobalCommissionRate()
+        {
+            var globalCommission = _context.GlobalCommission.FirstOrDefault();
+            if (globalCommission == null)
+            {
+                globalCommission = new GlobalCommission
+                {
+                    CommissionRate = 10m
+                };
+
+                _context.GlobalCommission.Add(globalCommission);
+                _context.SaveChanges();
+            }
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetBrands(
@@ -43,6 +59,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
+            GlobalCommissionRate();
             var query = _context.Brands.AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
