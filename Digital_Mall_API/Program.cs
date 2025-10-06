@@ -193,10 +193,8 @@ namespace Digital_Mall_API
 
             app.MapControllers();
 
-            // ✅ ADD HEALTH CHECK
             app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }));
 
-            // Seed admin user
             try
             {
                 await DbSeeder.SeedAdminAsync(app.Services);
