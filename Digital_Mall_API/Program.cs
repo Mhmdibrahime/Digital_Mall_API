@@ -33,7 +33,7 @@ namespace Digital_Mall_API
             builder.Services.AddSingleton(email);
 
             builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(builder.Configuration.GetConnectionString("constr")));
 
             builder.Services.AddScoped<IEmailSender, EmailSender>();
             builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
