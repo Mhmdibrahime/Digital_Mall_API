@@ -18,5 +18,7 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         public string Status { get; set; } = "Active";
         public virtual List<Order>? Orders { get; set; } = new List<Order>();
         public virtual List<TshirtDesignOrder>? DesignOrders { get; set; } = new List<TshirtDesignOrder>();
+        public virtual List<FollowingBrand>? FollowingBrands { get; set; } = new List<FollowingBrand>();
+        public virtual List<FollowingModel>? FollowingModels { get; set; } = new List<FollowingModel>();
     }
 }

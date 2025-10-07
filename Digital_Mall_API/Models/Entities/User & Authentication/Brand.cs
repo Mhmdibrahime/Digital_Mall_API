@@ -60,6 +60,8 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         public virtual List<OrderItem>? OrderItems { get; set; } = new List<OrderItem>();
         public virtual List<Payout>? Payouts { get; set; } = new List<Payout>();
         public virtual List<Reel>? Reels { get; set; } = new List<Reel>();
+        public virtual List<FollowingBrand>? Followers { get; set; } = new List<FollowingBrand>();
+
 
     }
 }

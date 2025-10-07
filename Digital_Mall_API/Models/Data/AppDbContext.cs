@@ -22,6 +22,9 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Brand> Brands { get; set; }
         public DbSet<FashionModel> FashionModels { get; set; }
+        public DbSet<FollowingBrand> FollowingBrands { get; set; }
+        public DbSet<FollowingModel> FollowingModels { get; set; }
+
         public DbSet<TshirtDesigner> TshirtDesigners { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
@@ -156,6 +159,43 @@ namespace Digital_Mall_API.Models.Data
                 .HasMany(c => c.SubCategories)
                 .WithOne(sc => sc.Category)
                 .HasForeignKey(sc => sc.CategoryId);
+
+            modelBuilder.Entity<FollowingBrand>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(fb => fb.Customer)
+                      .WithMany(c => c.FollowingBrands)
+                      .HasForeignKey(fb => fb.CustomerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(fb => fb.Brand)
+                      .WithMany(b => b.Followers)
+                      .HasForeignKey(fb => fb.BrandId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(fb => new { fb.CustomerId, fb.BrandId })
+                      .IsUnique();
+            });
+
+            modelBuilder.Entity<FollowingModel>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(fm => fm.Customer)
+                      .WithMany(c => c.FollowingModels)
+                      .HasForeignKey(fm => fm.CustomerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(fm => fm.FashionModel)
+                      .WithMany(m => m.Followers)
+                      .HasForeignKey(fm => fm.FashionModelId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(fm => new { fm.CustomerId, fm.FashionModelId })
+                      .IsUnique();
+            });
+
         }
     }
 }

@@ -111,6 +111,19 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             };
         }
 
+        [HttpGet("GetCategories")]
+        public async Task<ActionResult> GetCategories()
+        {
+            var categories = await _context.Categories
+                .Select(c => new
+                {
+                    Id = c.Id,
+                    Name = c.Name
+                })
+                .ToListAsync();
+            return Ok(categories);
+        }
+
         [HttpGet("GetSubcategoriesByCategory/{categoryId}")]
         public async Task<ActionResult> GetSubcategoriesByCategory(int categoryId)
         {
@@ -134,44 +147,50 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             if (string.IsNullOrEmpty(brandId))
                 return Unauthorized("Brand identifier not found in token");
 
-            var product = new Product
+            try
             {
-                Name = dto.Name,
-                Description = dto.Description,
-                Price = dto.Price,
-                IsActive = dto.IsActive,
-                BrandId = brandId,
-                SubCategoryId = dto.SubCategoryId,
-                Variants = dto.Variants.Select(v => new ProductVariant
+                var product = new Product
                 {
-                    Color = v.Color,
-                    Size = v.Size,
-                    StockQuantity = v.StockQuantity,
-                }).ToList()
-            };
+                    Name = dto.Name,
+                    Description = dto.Description,
+                    Price = dto.Price,
+                    IsActive = dto.IsActive,
+                    BrandId = brandId,
+                    SubCategoryId = dto.SubCategoryId,
+                    Variants = dto.Variants.Select(v => new ProductVariant
+                    {
+                        Color = v.Color,
+                        Size = v.Size,
+                        StockQuantity = v.StockQuantity,
+                    }).ToList()
+                };
 
-            
-            if (images != null && images.Count > 0)
-            {
-                foreach (var file in images)
+
+                if (images != null && images.Count > 0)
                 {
-                    var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-                    var path = Path.Combine(_env.WebRootPath, "uploads", "products", fileName);
+                    foreach (var file in images)
+                    {
+                        var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+                        var path = Path.Combine(_env.WebRootPath, "uploads", "products", fileName);
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                    using var stream = new FileStream(path, FileMode.Create);
-                    await file.CopyToAsync(stream);
+                        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                        using var stream = new FileStream(path, FileMode.Create);
+                        await file.CopyToAsync(stream);
 
-                    product.Images.Add(new ProductImage { ImageUrl = $"/uploads/products/{fileName}" });
+                        product.Images.Add(new ProductImage { ImageUrl = $"/uploads/products/{fileName}" });
+                    }
                 }
+
+                _context.Products.Add(product);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { product.Id, product.Name });
             }
-
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { product.Id, product.Name });
+            catch (Exception ex)
+            {
+                return BadRequest("An Error occured while adding the product");
+            }
         }
-
       
         [HttpPut("Update/{id}")]
         [Consumes("multipart/form-data")]
@@ -183,40 +202,46 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null) return NotFound();
+            try {
+                product.Name = dto.Name;
+                product.Description = dto.Description;
+                product.Price = dto.Price;
+                product.IsActive = dto.IsActive;
+                product.SubCategoryId = dto.SubCategoryId;
 
-            product.Name = dto.Name;
-            product.Description = dto.Description;
-            product.Price = dto.Price;
-            product.IsActive = dto.IsActive;
-            product.SubCategoryId = dto.SubCategoryId;
-
-            _context.ProductVariants.RemoveRange(product.Variants);
-            product.Variants = dto.Variants.Select(v => new ProductVariant
-            {
-                Color = v.Color,
-                Size = v.Size,
-                StockQuantity = v.StockQuantity,
-            }).ToList();
-
-            if (images != null && images.Count > 0)
-            {
-                _context.ProductImages.RemoveRange(product.Images);
-
-                foreach (var file in images)
+                _context.ProductVariants.RemoveRange(product.Variants);
+                product.Variants = dto.Variants.Select(v => new ProductVariant
                 {
-                    var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-                    var path = Path.Combine(_env.WebRootPath, "uploads", "products", fileName);
+                    Color = v.Color,
+                    Size = v.Size,
+                    StockQuantity = v.StockQuantity,
+                }).ToList();
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                    using var stream = new FileStream(path, FileMode.Create);
-                    await file.CopyToAsync(stream);
+                if (images != null && images.Count > 0)
+                {
+                    _context.ProductImages.RemoveRange(product.Images);
 
-                    product.Images.Add(new ProductImage { ImageUrl = $"/uploads/products/{fileName}" });
+                    foreach (var file in images)
+                    {
+                        var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+                        var path = Path.Combine(_env.WebRootPath, "uploads", "products", fileName);
+
+                        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                        using var stream = new FileStream(path, FileMode.Create);
+                        await file.CopyToAsync(stream);
+
+                        product.Images.Add(new ProductImage { ImageUrl = $"/uploads/products/{fileName}" });
+                    }
                 }
-            }
 
-            await _context.SaveChangesAsync();
-            return Ok();
+                await _context.SaveChangesAsync();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("An Error occured while updating the product");
+            }
+            
         }
 
       

@@ -180,12 +180,12 @@ namespace Digital_Mall_API.Controllers.Account
 
             
             var brand = await _context.Brands.FindAsync(user.Id.ToString());
-            if (brand != null && brand.Status != "Active")
+            if (brand != null && brand.Status != "Approved")
                 return Unauthorized("Your account is not yet approved by admin.");
 
             
             var model = await _context.FashionModels.FindAsync(user.Id.ToString());
-            if (model != null && model.Status != "Active")
+            if (model != null && model.Status != "Approved")
                 return Unauthorized("Your account is not yet approved by admin.");
 
             

@@ -165,7 +165,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         [HttpPut("{id}/UpdateStatus")]
         public async Task<IActionResult> UpdateBrandStatus(Guid id, [FromBody] string status)
         {
-            var brand = await _context.Brands.FindAsync(id);
+            var brand = await _context.Brands.FindAsync(id.ToString());
             if (brand == null)
             {
                 return NotFound();
