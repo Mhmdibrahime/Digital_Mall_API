@@ -105,7 +105,10 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     CommissionRate = b.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate,
                     CreatedAt = b.CreatedAt,
                     ProductsCount = b.Products.Count,
-                    OrdersCount = b.Orders.Count(o => o.Status == "completed" || o.Status == "delivered")
+                    OrdersCount = _context.OrderItems
+                .Count(oi => oi.BrandId == b.Id &&
+                             (oi.Order.Status == "Completed" || oi.Order.Status == "Delivered"))
+                
                 })
                 .ToListAsync();
 
@@ -140,10 +143,14 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     EvidenceOfProofUrl = b.EvidenceOfProofUrl,
                     CreatedAt = b.CreatedAt,
                     ProductsCount = b.Products.Count,
-                    OrdersCount = b.Orders.Count(o => o.Status == "completed" || o.Status == "delivered"),
-                    TotalSales = b.Orders
-                        .Where(o => o.Status == "completed" || o.Status == "delivered")
-                        .Sum(o => (decimal?)o.TotalAmount) ?? 0m
+                    OrdersCount = _context.OrderItems
+                                         .Count(oi => oi.BrandId == b.Id &&
+                                                      (oi.Order.Status == "Completed" || oi.Order.Status == "Delivered")),
+
+                    TotalSales = _context.OrderItems
+                .Where(oi => oi.BrandId == b.Id &&
+                             (oi.Order.Status == "Completed" || oi.Order.Status == "Delivered"))
+                .Sum(oi => (decimal?)oi.PriceAtTimeOfPurchase * oi.Quantity) ?? 0m
                 })
                 .FirstOrDefaultAsync(b => b.Id == id);
 
@@ -196,17 +203,22 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         {
             var brand = await _context.Brands.FindAsync(id);
             var user = await _context.Users.FindAsync(id);
-            if (user == null)
+
+            if (brand == null || user == null)
             {
-                return NotFound();
+                return NotFound("Brand or associated user not found.");
             }
 
+            
             var hasProducts = await _context.Products.AnyAsync(p => p.BrandId == id);
-            var hasOrders = await _context.Orders.AnyAsync(o => o.BrandId == id);
+
+            
+            var hasOrders = await _context.OrderItems
+                .AnyAsync(oi => oi.BrandId == id);
 
             if (hasProducts || hasOrders)
             {
-                return BadRequest("Cannot delete brand with associated products or orders");
+                return BadRequest("Cannot delete brand with associated products or orders.");
             }
 
             _context.Brands.Remove(brand);
@@ -215,6 +227,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
             return Ok(new { Message = "Brand deleted successfully" });
         }
+
 
         [HttpGet("StatusOptions")]
         public IActionResult GetStatusOptions()

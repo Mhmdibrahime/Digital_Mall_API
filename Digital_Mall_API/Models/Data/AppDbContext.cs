@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Digital_Mall_API.Models.Entities.Promotions;
+using Digital_Mall_API.Models.Entities.PlatformSettings;
 
 namespace Digital_Mall_API.Models.Data
 {
@@ -17,7 +18,7 @@ namespace Digital_Mall_API.Models.Data
         {
         }
 
-     
+        public DbSet<PlatformSettings> PlatformSettings { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Brand> Brands { get; set; }
         public DbSet<FashionModel> FashionModels { get; set; }
@@ -28,6 +29,7 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<RefundRequest> RefundRequests { get; set; }
         public DbSet<Reel> Reels { get; set; }
         public DbSet<ReelProduct> ReelProducts { get; set; }
         public DbSet<TshirtDesignOrder> TshirtDesignOrders { get; set; }
@@ -76,11 +78,11 @@ namespace Digital_Mall_API.Models.Data
                 .HasForeignKey(o => o.CustomerId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            modelBuilder.Entity<Order>()
-                .HasOne(o => o.Brand)
-                .WithMany(b => b.Orders)
-                .HasForeignKey(o => o.BrandId)
-                .OnDelete(DeleteBehavior.NoAction);
+            modelBuilder.Entity<OrderItem>()
+               .HasOne(oi => oi.Brand)
+               .WithMany(b => b.OrderItems)
+               .HasForeignKey(oi => oi.BrandId)
+               .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.Brand)

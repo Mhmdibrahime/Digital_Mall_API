@@ -10,11 +10,11 @@ namespace Digital_Mall_API.Controllers.Model
 {
     [Route("Model/[controller]")]
     [ApiController]
-    public class PayoutsController : ControllerBase
+    public class ModelPayoutsController : ControllerBase
     {
         private readonly AppDbContext _context;
 
-        public PayoutsController(AppDbContext context)
+        public ModelPayoutsController(AppDbContext context)
         {
             _context = context;
         }
@@ -31,7 +31,7 @@ namespace Digital_Mall_API.Controllers.Model
             return modelUser?.Id;
         }
 
-        [HttpGet]
+        [HttpGet("Earnings")]
         private async Task<ActionResult<ModelEarningsDto>> GetModelEarnings()
         {
             var modelId = GetCurrentModelId();
@@ -40,17 +40,14 @@ namespace Digital_Mall_API.Controllers.Model
                 return Unauthorized("Model not authenticated.");
             }
 
-            // Total commissions from reel sales
             var totalCommissions = await _context.ReelCommissions
                 .Where(rc => rc.FashionModelId == modelId)
                 .SumAsync(rc => rc.CommissionAmount);
 
-            // Paid commissions (already received)
             var paidCommissions = await _context.ReelCommissions
                 .Where(rc => rc.FashionModelId == modelId && rc.Status == "Paid")
                 .SumAsync(rc => rc.CommissionAmount);
 
-            // Pending commissions (not yet paid out)
             var pendingCommissions = await _context.ReelCommissions
                 .Where(rc => rc.FashionModelId == modelId && rc.Status == "Pending")
                 .SumAsync(rc => rc.CommissionAmount);
@@ -81,7 +78,7 @@ namespace Digital_Mall_API.Controllers.Model
             };
         }
 
-        [HttpGet]
+        [HttpGet("GetPayouts")]
         public async Task<ActionResult<IEnumerable<PayoutDto>>> GetPayouts(
            
             [FromQuery] int page = 1,
@@ -139,7 +136,7 @@ namespace Digital_Mall_API.Controllers.Model
             });
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("GetPayout/{id}")]
         public async Task<ActionResult<PayoutDto>> GetPayout(int id)
         {
             var modelId = GetCurrentModelId();
@@ -182,7 +179,7 @@ namespace Digital_Mall_API.Controllers.Model
             return payoutDto;
         }
 
-        [HttpPost]
+        [HttpPost("CreatePayout")]
         public async Task<ActionResult<PayoutDto>> CreatePayout(CreatePayoutDto createPayoutDto)
         {
             var modelId = GetCurrentModelId();

@@ -23,51 +23,43 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
         [HttpGet]
         public async Task<IActionResult> GetOrders(
-            [FromQuery] string? search,
-            [FromQuery] string? paymentStatus,
-            [FromQuery] string? shippingStatus,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 30)
+     [FromQuery] string? search,
+     [FromQuery] string? paymentStatus,
+     [FromQuery] string? shippingStatus,
+     [FromQuery] int page = 1,
+     [FromQuery] int pageSize = 30)
         {
             var query = _context.Orders
                 .Include(o => o.Customer)
-                .Include(o => o.Brand)
                 .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Brand)
                 .AsQueryable();
 
+            // 🔍 البحث
             if (!string.IsNullOrEmpty(search))
             {
                 query = query.Where(o =>
                     o.Id.ToString().Contains(search) ||
                     o.Customer.FullName.Contains(search) ||
-                    o.Brand.OfficialName.Contains(search));
+                    o.OrderItems.Any(oi => oi.Brand.OfficialName.Contains(search)));
             }
 
+            // 💰 فلترة حسب حالة الدفع
             if (!string.IsNullOrEmpty(paymentStatus) && paymentStatus != "All")
             {
-                if (paymentStatus == "Paid")
-                {
-                    query = query.Where(o => o.PaymentStatus == "Paid");
-                }
-                else if (paymentStatus == "Pending")
-                {
-                    query = query.Where(o => o.PaymentStatus == "Pending");
-                }
-                else if (paymentStatus == "COD")
-                {
-                    query = query.Where(o => o.PaymentStatus == "COD");
-                }
+                query = query.Where(o => o.PaymentStatus == paymentStatus);
             }
 
+            // 🚚 فلترة حسب حالة الشحن
             if (!string.IsNullOrEmpty(shippingStatus) && shippingStatus != "All")
             {
                 query = query.Where(o => o.Status == shippingStatus);
             }
 
             var totalCount = await query.CountAsync();
-
             query = query.OrderByDescending(o => o.OrderDate);
 
+            // 📦 تحميل البيانات مع البراندات
             var orders = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -77,9 +69,15 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     OrderNumber = $"ORD-{o.Id:D3}",
                     CustomerName = o.Customer.FullName,
                     CustomerEmail = o.Customer.Email,
-                    BrandName = o.Brand.OfficialName,
+
+                    // 🏷️ بدل BrandName واحد، بنعرض أسماء البراندز المشتركة في الأوردر
+                    BrandNames = o.OrderItems
+                        .Select(oi => oi.Brand.OfficialName)
+                        .Distinct()
+                        .ToList(),
+
                     OrderDate = o.OrderDate,
-                    TotalAmount = o.TotalAmount,
+                    TotalAmount = o.OrderItems.Sum(oi => oi.Quantity * oi.PriceAtTimeOfPurchase),
                     ItemsCount = o.OrderItems.Sum(oi => oi.Quantity),
                     PaymentStatus = o.PaymentStatus,
                     PaymentMethod = o.PaymentMethod_Type,
@@ -98,15 +96,17 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             });
         }
 
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetOrderDetails(int id)
         {
             var order = await _context.Orders
                 .Include(o => o.Customer)
-                .Include(o => o.Brand)
                 .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.ProductVariant)
-                .ThenInclude(pv => pv.Product)
+                    .ThenInclude(oi => oi.Brand)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.ProductVariant)
+                        .ThenInclude(pv => pv.Product)
                 .FirstOrDefaultAsync(o => o.Id == id);
 
             if (order == null)
@@ -120,27 +120,38 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 OrderNumber = $"ORD-{order.Id:D3}",
                 CustomerName = order.Customer.FullName,
                 CustomerEmail = order.Customer.Email,
-                BrandName = order.Brand.OfficialName,
+
+                // ✅ عرض كل البراندات المشاركة في الأوردر
+                BrandNames = order.OrderItems
+                    .Select(oi => oi.Brand.OfficialName)
+                    .Distinct()
+                    .ToList(),
+
                 OrderDate = order.OrderDate,
-                TotalAmount = order.TotalAmount,
+                TotalAmount = order.OrderItems.Sum(oi => oi.Quantity * oi.PriceAtTimeOfPurchase),
                 PaymentStatus = order.PaymentStatus,
                 PaymentMethod = order.PaymentMethod_Type,
                 ShippingStatus = order.Status,
                 ShippingTrackingNumber = order.ShippingTrackingNumber,
                 EstimatedDelivery = order.OrderDate.AddDays(5),
                 ShippingAddress = $"{order.ShippingAddress_Building}, {order.ShippingAddress_Street}, {order.ShippingAddress_City}, {order.ShippingAddress_Country}",
+
+                // ✅ تفاصيل كل منتج في الأوردر
                 OrderItems = order.OrderItems.Select(oi => new OrderItemDto
                 {
+                    BrandName = oi.Brand.OfficialName,
                     ProductName = oi.ProductVariant.Product.Name,
                     Quantity = oi.Quantity,
                     Price = oi.PriceAtTimeOfPurchase,
                     Total = oi.Quantity * oi.PriceAtTimeOfPurchase
                 }).ToList(),
+
                 Notes = order.Notes
             };
 
             return Ok(orderDetails);
         }
+
 
         [HttpPut("{id}/PaymentStatus")]
         public async Task<IActionResult> UpdatePaymentStatus(int id, [FromBody] UpdatePaymentStatusRequest request)
