@@ -209,28 +209,44 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         [HttpGet("Charts/TopBrands")]
         public async Task<IActionResult> GetTopBrands()
         {
-            var thirtyDaysAgo = DateTime.Now.AddDays(-30);
+            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
 
             var topBrands = await _context.Brands
-                .AsNoTracking() 
+                .AsNoTracking()
                 .Select(b => new
                 {
                     b.Id,
                     b.OfficialName,
                     b.LogoUrl,
-                    TotalSales = b.Orders
-                        .Where(o => o.Status == "completed" || o.Status == "delivered")
-                        .Sum(o => (decimal?)o.TotalAmount) ?? 0m,
-                    Last30DaysSales = b.Orders
-                        .Where(o => (o.Status == "completed" || o.Status == "delivered") &&
-                                   o.OrderDate >= thirtyDaysAgo)
-                        .Sum(o => (decimal?)o.TotalAmount) ?? 0m,
-                    TotalOrders = b.Orders.Count,
-                    RecentOrders = b.Orders.Count(o => o.OrderDate >= thirtyDaysAgo)
+
+                    TotalSales = _context.OrderItems
+                        .Where(oi => oi.BrandId == b.Id &&
+                                     (oi.Order.Status == "Completed" || oi.Order.Status == "Delivered"))
+                        .Sum(oi => (decimal?)oi.PriceAtTimeOfPurchase * oi.Quantity) ?? 0m,
+
+                    Last30DaysSales = _context.OrderItems
+                        .Where(oi => oi.BrandId == b.Id &&
+                                     (oi.Order.Status == "Completed" || oi.Order.Status == "Delivered") &&
+                                     oi.Order.OrderDate >= thirtyDaysAgo)
+                        .Sum(oi => (decimal?)oi.PriceAtTimeOfPurchase * oi.Quantity) ?? 0m,
+
+                    
+                    TotalOrders = _context.OrderItems
+                        .Where(oi => oi.BrandId == b.Id)
+                        .Select(oi => oi.OrderId)
+                        .Distinct()
+                        .Count(),
+
+                  
+                    RecentOrders = _context.OrderItems
+                        .Where(oi => oi.BrandId == b.Id && oi.Order.OrderDate >= thirtyDaysAgo)
+                        .Select(oi => oi.OrderId)
+                        .Distinct()
+                        .Count()
                 })
-                .OrderByDescending(b => b.TotalSales) 
-                .ThenByDescending(b => b.Last30DaysSales) 
-                .Take(5)
+                .OrderByDescending(b => b.TotalSales)
+                .ThenByDescending(b => b.Last30DaysSales)
+                .Take(5) 
                 .ToListAsync();
 
             return Ok(topBrands);

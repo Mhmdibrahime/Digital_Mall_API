@@ -111,44 +111,48 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
         [HttpGet("BrandSales")]
         public async Task<IActionResult> GetBrandSalesReport(
-              [FromQuery] int? year = 2025,
-              [FromQuery] string? brandId = null)
+       [FromQuery] int? year = 2025,
+       [FromQuery] string? brandId = null)
         {
-            var availableYears = await _context.Orders
-                .Where(o => o.OrderDate.Year >= 2025)
-                .Select(o => o.OrderDate.Year)
+            
+            var availableYears = await _context.OrderItems
+                .Where(oi => oi.Order.OrderDate.Year >= 2025)
+                .Select(oi => oi.Order.OrderDate.Year)
                 .Distinct()
                 .OrderBy(y => y)
                 .ToListAsync();
-
 
             var availableBrands = await _context.Brands
                 .Where(b => b.Status == "Active")
                 .Select(b => new { b.Id, b.OfficialName })
                 .ToListAsync();
 
-            var ordersQuery = _context.Orders
-                .Include(o => o.Brand)
-                .Where(o => o.Status != "Cancelled");
+           
+            var orderItemsQuery = _context.OrderItems
+                .Include(oi => oi.Brand)
+                .Include(oi => oi.Order)
+                .Where(oi =>
+                    oi.Order.Status != "Cancelled" &&
+                    oi.Order.PaymentStatus == "Paid");
 
             if (year.HasValue)
             {
-                ordersQuery = ordersQuery.Where(o => o.OrderDate.Year == year.Value);
+                orderItemsQuery = orderItemsQuery.Where(oi => oi.Order.OrderDate.Year == year.Value);
             }
 
             if (!string.IsNullOrEmpty(brandId))
             {
-                ordersQuery = ordersQuery.Where(o => o.BrandId == brandId);
+                orderItemsQuery = orderItemsQuery.Where(oi => oi.BrandId == brandId);
             }
 
-            var salesData = await ordersQuery
-                .GroupBy(o => new { Year = o.OrderDate.Year, BrandId = o.BrandId })
+            var salesData = await orderItemsQuery
+                .GroupBy(oi => new { Year = oi.Order.OrderDate.Year, BrandId = oi.BrandId })
                 .Select(g => new BrandSalesDto
                 {
                     Year = g.Key.Year,
                     BrandId = g.Key.BrandId,
                     BrandName = g.First().Brand.OfficialName,
-                    Sales = g.Sum(o => o.TotalAmount)
+                    Sales = g.Sum(x => x.Quantity * x.PriceAtTimeOfPurchase)
                 })
                 .OrderBy(s => s.Year)
                 .ThenBy(s => s.BrandName)
@@ -161,11 +165,11 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     Year = g.Key,
                     Brands = g.Select(b => new
                     {
-                        BrandId = b.BrandId,
-                        BrandName = b.BrandName,
-                        Sales = b.Sales
+                        b.BrandId,
+                        b.BrandName,
+                        b.Sales
                     }).ToList(),
-                    TotalSales = g.Sum(b => b.Sales),
+                    TotalSales = g.Sum(b => b.Sales)
                 })
                 .OrderBy(g => g.Year)
                 .ToList();
@@ -179,6 +183,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 Data = result
             });
         }
+
         [HttpGet("UserGrowth")]
         public async Task<IActionResult> GetUserGrowthReport(
             [FromQuery] int? year = null)

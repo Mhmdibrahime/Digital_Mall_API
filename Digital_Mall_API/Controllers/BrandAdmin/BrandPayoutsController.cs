@@ -40,33 +40,38 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 return Unauthorized("Brand not authenticated.");
             }
 
-            // Total revenue from delivered and paid orders
-            var totalRevenue = await _context.Orders
-                .Where(o => o.BrandId == brandId && o.Status == "Delivered" && o.PaymentStatus == "Paid")
-                .SumAsync(o => o.TotalAmount);
+            var totalRevenue = await _context.OrderItems
+     .Where(oi =>
+         oi.BrandId == brandId &&
+         oi.Order.Status == "Deliverd" &&
+         oi.Order.PaymentStatus == "Paid")
+     .SumAsync(oi => oi.Quantity * oi.PriceAtTimeOfPurchase);
 
-            // Get brand platform commission deductions
+
+
             var platformCommissionDeductions = await CalculateBrandCommissionDeductions(brandId);
 
-            // Get model commission deductions (from ReelCommissions)
             var modelCommissionDeductions = await _context.ReelCommissions
                 .Where(rc => rc.BrandId == brandId && rc.Status == "Paid")
                 .SumAsync(rc => rc.CommissionAmount);
 
             var brandUserId = await GetBrandUserIdAsync(brandId);
+
+            
             var totalPaidOut = brandUserId.HasValue
                 ? await _context.Payouts
                     .Where(p => p.PayeeUserId == brandUserId.Value && p.Status == "Completed")
                     .SumAsync(p => p.Amount)
                 : 0;
 
+           
             var pendingPayments = brandUserId.HasValue
                 ? await _context.Payouts
-                    .Where(p => p.PayeeUserId == brandUserId.Value && (p.Status == "Approved" || p.Status == "Pending"))
+                    .Where(p => p.PayeeUserId == brandUserId.Value &&
+                                (p.Status == "Approved" || p.Status == "Pending"))
                     .SumAsync(p => p.Amount)
                 : 0;
 
-            // Pending model commissions (not yet paid to models)
             var pendingModelCommissions = await _context.ReelCommissions
                 .Where(rc => rc.BrandId == brandId && rc.Status == "Pending")
                 .SumAsync(rc => rc.CommissionAmount);
@@ -75,6 +80,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             var netEarnings = totalRevenue - totalDeductions;
             var availableForPayout = Math.Max(0, netEarnings - totalPaidOut);
 
+           
             return new FinancialEarningsDto
             {
                 TotalRevenue = totalRevenue,
@@ -87,6 +93,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 AvailableForPayout = availableForPayout
             };
         }
+
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PayoutDto>>> GetPayouts(
@@ -299,19 +306,29 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
         private async Task<decimal> CalculateBrandCommissionDeductions(string brandId)
         {
-            var brandOrders = await _context.Orders
-                .Where(o => o.BrandId == brandId && o.Status == "Delivered" && o.PaymentStatus == "Paid")
+
+            var brandOrderItems = await _context.OrderItems
+                .Include(oi => oi.Order)
+                .Where(oi =>
+                    oi.BrandId == brandId &&
+                    oi.Order.Status == "Completed" &&
+                    oi.Order.PaymentStatus == "Paid")
                 .ToListAsync();
 
-            decimal totalCommission = 0;
+            if (!brandOrderItems.Any())
+                return 0;
 
-            foreach (var order in brandOrders)
-            {
-                var brand = await _context.Brands.FindAsync(brandId);
-                var commissionRate = brand?.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate;
 
-                totalCommission += order.TotalAmount * (commissionRate / 100);
-            }
+            var brand = await _context.Brands.FindAsync(brandId);
+            var globalCommissionRate = await _context.GlobalCommission
+                .Select(g => g.CommissionRate)
+                .FirstOrDefaultAsync();
+
+            var commissionRate = brand?.SpecificCommissionRate ?? globalCommissionRate;
+
+
+            decimal totalCommission = brandOrderItems
+                .Sum(oi => oi.PriceAtTimeOfPurchase * oi.Quantity * (commissionRate / 100));
 
             return totalCommission;
         }
