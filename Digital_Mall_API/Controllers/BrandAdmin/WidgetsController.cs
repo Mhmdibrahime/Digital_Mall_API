@@ -233,8 +233,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             var activeDiscountsCount = await _context.Products
                 .Where(p => p.BrandId == brandId &&
                            p.IsActive &&
-                           p.DiscountId != null &&
-                           p.Discount.Status == "Active")
+                           p.DiscountId != null
+                           )
                 .Select(p => p.DiscountId)
                 .Distinct()
                 .CountAsync();

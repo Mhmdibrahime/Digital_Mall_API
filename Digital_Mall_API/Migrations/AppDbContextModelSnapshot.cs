@@ -35,7 +35,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("GlobalCommission");
+                    b.ToTable("GlobalCommission", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Financials.Payout", b =>
@@ -96,7 +96,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("PayeeUserId");
 
-                    b.ToTable("Payouts");
+                    b.ToTable("Payouts", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Orders___Shopping.Order", b =>
@@ -172,7 +172,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Orders___Shopping.OrderItem", b =>
@@ -201,7 +201,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ProductVariantId");
 
-                    b.ToTable("OrderItems");
+                    b.ToTable("OrderItems", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.Category", b =>
@@ -229,7 +229,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.Product", b =>
@@ -285,7 +285,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("SubCategoryId");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductImage", b =>
@@ -311,7 +311,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductImages");
+                    b.ToTable("ProductImages", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductVariant", b =>
@@ -352,7 +352,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductVariants");
+                    b.ToTable("ProductVariants", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.SubCategory", b =>
@@ -380,7 +380,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("SubCategories");
+                    b.ToTable("SubCategories", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.Discount", b =>
@@ -409,7 +409,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Discounts");
+                    b.ToTable("Discounts", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.ProductDiscount", b =>
@@ -436,7 +436,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductDiscounts");
+                    b.ToTable("ProductDiscounts", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.PromoCode", b =>
@@ -485,7 +485,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PromoCodes");
+                    b.ToTable("PromoCodes", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.PromoCodeUsage", b =>
@@ -523,7 +523,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("PromoCodeId");
 
-                    b.ToTable("PromoCodeUsages");
+                    b.ToTable("PromoCodeUsages", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.Reel", b =>
@@ -596,7 +596,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("PostedByUserId");
 
-                    b.ToTable("Reels");
+                    b.ToTable("Reels", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.ReelProduct", b =>
@@ -611,7 +611,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ReelProducts");
+                    b.ToTable("ReelProducts", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TShirtSize", b =>
@@ -631,7 +631,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TShirtSizes");
+                    b.ToTable("TShirtSizes", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TShirtStyle", b =>
@@ -651,7 +651,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TShirtStyles");
+                    b.ToTable("TShirtStyles", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignOrder", b =>
@@ -727,7 +727,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("CustomerUserId");
 
-                    b.ToTable("TshirtDesignOrders");
+                    b.ToTable("TshirtDesignOrders", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignSubmission", b =>
@@ -758,7 +758,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("TshirtDesignSubmissions");
+                    b.ToTable("TshirtDesignSubmissions", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignSubmissionImage", b =>
@@ -781,7 +781,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("SubmissionId");
 
-                    b.ToTable("TshirtDesignSubmissionImage");
+                    b.ToTable("TshirtDesignSubmissionImage", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtTemplate", b =>
@@ -813,7 +813,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TshirtTemplates");
+                    b.ToTable("TshirtTemplates", (string)null);
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.ApplicationUser", b =>
