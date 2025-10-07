@@ -215,7 +215,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
             foreach (var product in discount.Products)
             {
-                product.DiscountId = null;
+                product.ProductDiscountId = null;
             }
 
             _context.ProductDiscounts.Remove(discount);
@@ -267,7 +267,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
             foreach (var product in productsToUpdate)
             {
-                product.DiscountId = discountId;
+                product.ProductDiscountId = discountId;
             }
 
             await _context.SaveChangesAsync();
@@ -276,12 +276,12 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         private async Task UpdateDiscountProducts(int discountId, List<int> productIds)
         {
             var currentProducts = await _context.Products
-                .Where(p => p.DiscountId == discountId)
+                .Where(p => p.ProductDiscountId == discountId)
                 .ToListAsync();
 
             foreach (var product in currentProducts)
             {
-                product.DiscountId = null;
+                product.ProductDiscountId = null;
             }
 
             if (productIds.Any())

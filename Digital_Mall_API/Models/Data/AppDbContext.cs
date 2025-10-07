@@ -108,7 +108,12 @@ namespace Digital_Mall_API.Models.Data
                 .HasForeignKey(pi => pi.ProductId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-           
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.ProductDiscount)
+                .WithMany(pd => pd.Products)
+                .HasForeignKey(p => p.ProductDiscountId)
+                .OnDelete(DeleteBehavior.SetNull);
+
 
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.Order)
