@@ -15,11 +15,17 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         [StringLength(500)]
         public string? Bio { get; set; }
 
+        [StringLength(200)]
+        public string? Facebook { get; set; }
+        [StringLength(200)]
+        public string? Instgram { get; set; }
+        public string? OtherSocialAccount { get; set; }
         [Required]
         [StringLength(50)]
         public string Status { get; set; } = "Pending";
 
-        
+        [StringLength(2083)] 
+        public string? ImageUrl { get; set; }   
 
         [Range(0, 100)]
         [Column(TypeName = "decimal(5,2)")]

@@ -42,6 +42,7 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<TshirtTemplate> TshirtTemplates { get; set; }
         public DbSet<TShirtSize> TShirtSizes { get; set; }
         public DbSet<TShirtStyle> TShirtStyles { get; set; }
+        public DbSet<ReelCommission> ReelCommissions { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

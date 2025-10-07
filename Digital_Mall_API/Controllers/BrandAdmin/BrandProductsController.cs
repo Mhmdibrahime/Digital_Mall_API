@@ -71,9 +71,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                         Id = v.Id,
                         Color = v.Color,
                         Size = v.Size,
-                        Style = v.Style,
                         StockQuantity = v.StockQuantity,
-                        SKU = v.SKU
                     }).ToList(),
                     Images = p.Images.Select(img => img.ImageUrl).ToList()
                 }).ToListAsync();
@@ -107,15 +105,27 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     Id = v.Id,
                     Color = v.Color,
                     Size = v.Size,
-                    Style = v.Style,
                     StockQuantity = v.StockQuantity,
-                    SKU = v.SKU
                 }).ToList(),
                 Images = product.Images.Select(img => img.ImageUrl).ToList()
             };
         }
 
-     
+        [HttpGet("GetSubcategoriesByCategory/{categoryId}")]
+        public async Task<ActionResult> GetSubcategoriesByCategory(int categoryId)
+        {
+            var subcategories = await _context.SubCategories
+                .Where(sc => sc.CategoryId == categoryId)
+                .Select(sc => new
+                {
+                    Id = sc.Id,
+                    Name = sc.Name
+                })
+                .ToListAsync();
+
+            return Ok(subcategories);
+        }
+
         [HttpPost("Add")]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult> Create([FromForm] ProductCreateUpdateDto dto, List<IFormFile> images)
@@ -136,9 +146,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 {
                     Color = v.Color,
                     Size = v.Size,
-                    Style = v.Style,
                     StockQuantity = v.StockQuantity,
-                    SKU = v.SKU
                 }).ToList()
             };
 
@@ -187,9 +195,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             {
                 Color = v.Color,
                 Size = v.Size,
-                Style = v.Style,
                 StockQuantity = v.StockQuantity,
-                SKU = v.SKU
             }).ToList();
 
             if (images != null && images.Count > 0)

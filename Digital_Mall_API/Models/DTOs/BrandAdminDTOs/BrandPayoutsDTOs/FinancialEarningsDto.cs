@@ -4,9 +4,11 @@
     {
         public decimal TotalRevenue { get; set; }
         public decimal PendingPayments { get; set; }
-        public decimal CommissionDeductions { get; set; }
+        public decimal PlatformCommissionDeductions { get; set; }
+        public decimal ModelCommissionDeductions { get; set; }
+        public decimal PendingModelCommissions { get; set; }
+        public decimal TotalDeductions { get; set; }
         public decimal NetEarnings { get; set; }
-
         public decimal AvailableForPayout { get; set; }
     }
 }

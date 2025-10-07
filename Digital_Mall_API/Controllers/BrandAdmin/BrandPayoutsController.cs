@@ -31,8 +31,6 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             return brandUser?.Id;
         }
 
-
-
         [HttpGet("earnings")]
         public async Task<ActionResult<FinancialEarningsDto>> GetFinancialEarnings()
         {
@@ -42,9 +40,18 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 return Unauthorized("Brand not authenticated.");
             }
 
+            // Total revenue from delivered and paid orders
             var totalRevenue = await _context.Orders
-                .Where(o => o.BrandId == brandId && o.Status == "Deliverd" && o.PaymentStatus == "Paid")
+                .Where(o => o.BrandId == brandId && o.Status == "Delivered" && o.PaymentStatus == "Paid")
                 .SumAsync(o => o.TotalAmount);
+
+            // Get brand platform commission deductions
+            var platformCommissionDeductions = await CalculateBrandCommissionDeductions(brandId);
+
+            // Get model commission deductions (from ReelCommissions)
+            var modelCommissionDeductions = await _context.ReelCommissions
+                .Where(rc => rc.BrandId == brandId && rc.Status == "Paid")
+                .SumAsync(rc => rc.CommissionAmount);
 
             var brandUserId = await GetBrandUserIdAsync(brandId);
             var totalPaidOut = brandUserId.HasValue
@@ -59,17 +66,25 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     .SumAsync(p => p.Amount)
                 : 0;
 
-            var commissionDeductions = await CalculateBrandCommissionDeductions(brandId);
+            // Pending model commissions (not yet paid to models)
+            var pendingModelCommissions = await _context.ReelCommissions
+                .Where(rc => rc.BrandId == brandId && rc.Status == "Pending")
+                .SumAsync(rc => rc.CommissionAmount);
 
-            var availableBalance = totalRevenue - totalPaidOut;
+            var totalDeductions = platformCommissionDeductions + modelCommissionDeductions + pendingModelCommissions;
+            var netEarnings = totalRevenue - totalDeductions;
+            var availableForPayout = Math.Max(0, netEarnings - totalPaidOut);
 
             return new FinancialEarningsDto
             {
                 TotalRevenue = totalRevenue,
                 PendingPayments = pendingPayments,
-                CommissionDeductions = commissionDeductions,
-                NetEarnings = totalRevenue - commissionDeductions,
-                AvailableForPayout = Math.Max(0, availableBalance) // Ensure non-negative
+                PlatformCommissionDeductions = platformCommissionDeductions,
+                ModelCommissionDeductions = modelCommissionDeductions,
+                PendingModelCommissions = pendingModelCommissions,
+                TotalDeductions = totalDeductions,
+                NetEarnings = netEarnings,
+                AvailableForPayout = availableForPayout
             };
         }
 
@@ -237,53 +252,6 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             return CreatedAtAction(nameof(GetPayout), new { id = payout.Id }, await GetPayout(payout.Id));
         }
 
-        //[HttpPut("{id}/cancel")]
-        //public async Task<IActionResult> CancelPayout(int id)
-        //{
-        //    var brandId = GetCurrentBrandId();
-        //    if (string.IsNullOrEmpty(brandId))
-        //    {
-        //        return Unauthorized("Brand not authenticated.");
-        //    }
-
-        //    var brandUserId = await GetBrandUserIdAsync(brandId);
-        //    if (!brandUserId.HasValue)
-        //    {
-        //        return NotFound("Brand user not found.");
-        //    }
-
-        //    var payout = await _context.Payouts
-        //        .FirstOrDefaultAsync(p => p.Id == id && p.PayeeUserId == brandUserId.Value);
-
-        //    if (payout == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    if (payout.Status != "Pending")
-        //    {
-        //        return BadRequest("Only pending payouts can be cancelled.");
-        //    }
-
-        //    payout.Status = "Cancelled";
-        //    payout.Notes = "Cancelled by brand.";
-
-        //    try
-        //    {
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (DbUpdateConcurrencyException)
-        //    {
-        //        if (!PayoutExists(id))
-        //        {
-        //            return NotFound();
-        //        }
-        //        throw;
-        //    }
-
-        //    return NoContent();
-        //}
-
         [HttpGet("available-balance")]
         public async Task<ActionResult<decimal>> GetAvailableBalance()
         {
@@ -293,21 +261,36 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 return Unauthorized("Brand not authenticated.");
             }
 
-            var totalRevenue = await _context.Orders
-                .Where(o => o.BrandId == brandId && o.Status == "Completed" && o.PaymentStatus == "Paid")
-                .SumAsync(o => o.TotalAmount);
-
-            var brandUserId = await GetBrandUserIdAsync(brandId);
-            var totalPaidOut = brandUserId.HasValue
-                ? await _context.Payouts
-                    .Where(p => p.PayeeUserId == brandUserId.Value && p.Status == "Completed")
-                    .SumAsync(p => p.Amount)
-                : 0;
-
-            var availableBalance = totalRevenue - totalPaidOut;
-
-            return Ok(Math.Max(0, availableBalance));
+            var earnings = await GetFinancialEarnings();
+            return Ok(earnings.Value.AvailableForPayout);
         }
+
+        //[HttpGet("commission-breakdown")]
+        //public async Task<ActionResult> GetCommissionBreakdown()
+        //{
+        //    var brandId = GetCurrentBrandId();
+        //    if (string.IsNullOrEmpty(brandId))
+        //    {
+        //        return Unauthorized("Brand not authenticated.");
+        //    }
+
+        //    var platformCommission = await CalculateBrandCommissionDeductions(brandId);
+        //    var paidModelCommissions = await _context.ReelCommissions
+        //        .Where(rc => rc.BrandId == brandId && rc.Status == "Paid")
+        //        .SumAsync(rc => rc.CommissionAmount);
+
+        //    var pendingModelCommissions = await _context.ReelCommissions
+        //        .Where(rc => rc.BrandId == brandId && rc.Status == "Pending")
+        //        .SumAsync(rc => rc.CommissionAmount);
+
+        //    return Ok(new
+        //    {
+        //        PlatformCommission = platformCommission,
+        //        PaidModelCommissions = paidModelCommissions,
+        //        PendingModelCommissions = pendingModelCommissions,
+        //        TotalCommissions = platformCommission + paidModelCommissions + pendingModelCommissions
+        //    });
+        //}
 
         private bool PayoutExists(int id)
         {
@@ -317,7 +300,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         private async Task<decimal> CalculateBrandCommissionDeductions(string brandId)
         {
             var brandOrders = await _context.Orders
-                .Where(o => o.BrandId == brandId && o.Status == "Completed" && o.PaymentStatus == "Paid")
+                .Where(o => o.BrandId == brandId && o.Status == "Delivered" && o.PaymentStatus == "Paid")
                 .ToListAsync();
 
             decimal totalCommission = 0;
@@ -325,7 +308,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             foreach (var order in brandOrders)
             {
                 var brand = await _context.Brands.FindAsync(brandId);
-                var commissionRate = brand?.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate; 
+                var commissionRate = brand?.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate;
 
                 totalCommission += order.TotalAmount * (commissionRate / 100);
             }
