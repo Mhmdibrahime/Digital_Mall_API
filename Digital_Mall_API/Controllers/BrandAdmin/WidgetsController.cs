@@ -60,12 +60,17 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 return BadRequest($"Year must be between 2000 and {currentYear}.");
             }
 
-            var hasOrdersInYear = await _context.Orders
-                .AnyAsync(o => o.BrandId == brandId && o.OrderDate.Year == year);
+        
+            var hasSalesInYear = await _context.OrderItems
+                .AnyAsync(oi =>
+                    oi.BrandId == brandId &&
+                    oi.Order.OrderDate.Year == year &&
+                    oi.Order.Status == "Delivered" &&
+                    oi.Order.PaymentStatus == "Paid");
 
-            if (!hasOrdersInYear)
+            if (!hasSalesInYear)
             {
-                return Ok(new List<MonthlySalesDto>()); 
+                return Ok(new List<MonthlySalesDto>());
             }
 
             var monthlySales = new List<MonthlySalesDto>();
@@ -74,15 +79,16 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             for (int month = 1; month <= 12; month++)
             {
                 var monthStart = new DateTime(year, month, 1);
-                var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+                var monthEnd = monthStart.AddMonths(1);
 
-                var monthlyRevenue = await _context.Orders
-                    .Where(o => o.BrandId == brandId &&
-                               o.Status == "Delivered" &&
-                               o.PaymentStatus == "Paid" &&
-                               o.OrderDate >= monthStart &&
-                               o.OrderDate <= monthEnd)
-                    .SumAsync(o => (decimal?)o.TotalAmount) ?? 0; 
+                var monthlyRevenue = await _context.OrderItems
+                    .Where(oi =>
+                        oi.BrandId == brandId &&
+                        oi.Order.Status == "Delivered" &&
+                        oi.Order.PaymentStatus == "Paid" &&
+                        oi.Order.OrderDate >= monthStart &&
+                        oi.Order.OrderDate < monthEnd)
+                    .SumAsync(oi => (decimal?)(oi.Quantity * oi.PriceAtTimeOfPurchase)) ?? 0;
 
                 monthlySales.Add(new MonthlySalesDto
                 {
@@ -93,6 +99,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
             return Ok(monthlySales);
         }
+
         private async Task<TotalProductsDto> GetTotalProductsData(string brandId)
         {
             var currentMonth = DateTime.UtcNow.Month;
@@ -137,20 +144,29 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             var lastMonth = currentMonth == 1 ? 12 : currentMonth - 1;
             var lastMonthYear = currentMonth == 1 ? currentYear - 1 : currentYear;
 
-            var totalOrders = await _context.Orders
-                .Where(o => o.BrandId == brandId)
+         
+            var totalOrders = await _context.OrderItems
+                .Where(oi => oi.BrandId == brandId)
+                .Select(oi => oi.OrderId)
+                .Distinct()
                 .CountAsync();
 
-            var lastMonthOrders = await _context.Orders
-                .Where(o => o.BrandId == brandId &&
-                           o.OrderDate.Month == lastMonth &&
-                           o.OrderDate.Year == lastMonthYear)
+            var lastMonthOrders = await _context.OrderItems
+                .Where(oi =>
+                    oi.BrandId == brandId &&
+                    oi.Order.OrderDate.Month == lastMonth &&
+                    oi.Order.OrderDate.Year == lastMonthYear)
+                .Select(oi => oi.OrderId)
+                .Distinct()
                 .CountAsync();
 
-            var currentMonthOrders = await _context.Orders
-                .Where(o => o.BrandId == brandId &&
-                           o.OrderDate.Month == currentMonth &&
-                           o.OrderDate.Year == currentYear)
+            var currentMonthOrders = await _context.OrderItems
+                .Where(oi =>
+                    oi.BrandId == brandId &&
+                    oi.Order.OrderDate.Month == currentMonth &&
+                    oi.Order.OrderDate.Year == currentYear)
+                .Select(oi => oi.OrderId)
+                .Distinct()
                 .CountAsync();
 
             var percentageChange = lastMonthOrders > 0
@@ -165,6 +181,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             };
         }
 
+
         private async Task<TotalRevenueDto> GetTotalRevenueData(string brandId)
         {
             var currentMonth = DateTime.UtcNow.Month;
@@ -172,25 +189,30 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             var lastMonth = currentMonth == 1 ? 12 : currentMonth - 1;
             var lastMonthYear = currentMonth == 1 ? currentYear - 1 : currentYear;
 
-            var totalRevenue = await _context.Orders
-                .Where(o => o.BrandId == brandId && o.Status == "Delivered" && o.PaymentStatus == "Paid")
-                .SumAsync(o => o.TotalAmount);
+            var totalRevenue = await _context.OrderItems
+                .Where(oi =>
+                    oi.BrandId == brandId &&
+                    oi.Order.Status == "Delivered" &&
+                    oi.Order.PaymentStatus == "Paid")
+                .SumAsync(oi => oi.Quantity * oi.PriceAtTimeOfPurchase);
 
-            var lastMonthRevenue = await _context.Orders
-                .Where(o => o.BrandId == brandId &&
-                           o.Status == "Delivered" &&
-                           o.PaymentStatus == "Paid" &&
-                           o.OrderDate.Month == lastMonth &&
-                           o.OrderDate.Year == lastMonthYear)
-                .SumAsync(o => o.TotalAmount);
+            var lastMonthRevenue = await _context.OrderItems
+                .Where(oi =>
+                    oi.BrandId == brandId &&
+                    oi.Order.Status == "Delivered" &&
+                    oi.Order.PaymentStatus == "Paid" &&
+                    oi.Order.OrderDate.Month == lastMonth &&
+                    oi.Order.OrderDate.Year == lastMonthYear)
+                .SumAsync(oi => oi.Quantity * oi.PriceAtTimeOfPurchase);
 
-            var currentMonthRevenue = await _context.Orders
-                .Where(o => o.BrandId == brandId &&
-                           o.Status == "Delivered" &&
-                           o.PaymentStatus == "Paid" &&
-                           o.OrderDate.Month == currentMonth &&
-                           o.OrderDate.Year == currentYear)
-                .SumAsync(o => o.TotalAmount);
+            var currentMonthRevenue = await _context.OrderItems
+                .Where(oi =>
+                    oi.BrandId == brandId &&
+                    oi.Order.Status == "Delivered" &&
+                    oi.Order.PaymentStatus == "Paid" &&
+                    oi.Order.OrderDate.Month == currentMonth &&
+                    oi.Order.OrderDate.Year == currentYear)
+                .SumAsync(oi => oi.Quantity * oi.PriceAtTimeOfPurchase);
 
             var percentageChange = lastMonthRevenue > 0
                 ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
@@ -204,6 +226,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 Currency = "LE"
             };
         }
+
 
         private async Task<ActiveDiscountsDto> GetActiveDiscountsData(string brandId)
         {
@@ -225,9 +248,16 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
         private async Task<AverageOrderPriceDto> GetAverageOrderPriceData(string brandId)
         {
-            var averageOrderPrice = await _context.Orders
-                .Where(o => o.BrandId == brandId && o.Status == "Delivered" && o.PaymentStatus == "Paid")
-                .AverageAsync(o => o.TotalAmount);
+            var orderRevenues = await _context.OrderItems
+                .Where(oi =>
+                    oi.BrandId == brandId &&
+                    oi.Order.Status == "Delivered" &&
+                    oi.Order.PaymentStatus == "Paid")
+                .GroupBy(oi => oi.OrderId)
+                .Select(g => g.Sum(x => x.Quantity * x.PriceAtTimeOfPurchase))
+                .ToListAsync();
+
+            var averageOrderPrice = orderRevenues.Any() ? orderRevenues.Average() : 0;
 
             return new AverageOrderPriceDto
             {
@@ -236,5 +266,6 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 Description = "per order"
             };
         }
+
     }
 }

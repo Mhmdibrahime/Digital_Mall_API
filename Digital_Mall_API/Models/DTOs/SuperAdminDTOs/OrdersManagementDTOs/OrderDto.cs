@@ -6,7 +6,7 @@
         public string OrderNumber { get; set; }
         public string CustomerName { get; set; }
         public string CustomerEmail { get; set; }
-        public string BrandName { get; set; }
+        public List<string> BrandNames { get; set; }
         public DateTime OrderDate { get; set; }
         public decimal TotalAmount { get; set; }
         public int ItemsCount { get; set; }

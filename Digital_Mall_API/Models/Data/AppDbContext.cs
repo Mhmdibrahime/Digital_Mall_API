@@ -75,11 +75,11 @@ namespace Digital_Mall_API.Models.Data
                 .HasForeignKey(o => o.CustomerId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            modelBuilder.Entity<Order>()
-                .HasOne(o => o.Brand)
-                .WithMany(b => b.Orders)
-                .HasForeignKey(o => o.BrandId)
-                .OnDelete(DeleteBehavior.NoAction);
+            modelBuilder.Entity<OrderItem>()
+               .HasOne(oi => oi.Brand)
+               .WithMany(b => b.OrderItems)
+               .HasForeignKey(oi => oi.BrandId)
+               .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Product>()
                 .HasOne(p => p.Brand)

@@ -11,8 +11,7 @@ namespace Digital_Mall_API.Models.Entities.Orders___Shopping
         [Required]
         public string CustomerId { get; set; }
 
-        [Required]
-        public string BrandId { get; set; }
+     
 
         [Required]
         public DateTime OrderDate { get; set; }
@@ -55,7 +54,7 @@ namespace Digital_Mall_API.Models.Entities.Orders___Shopping
         [StringLength(5000)]
         public string Notes { get; set; }
         public virtual Customer? Customer{ get; set; }
-        public virtual Brand? Brand { get; set; }
+       
         public virtual List<OrderItem>? OrderItems { get; set; } = new List<OrderItem>();
     }
 }
