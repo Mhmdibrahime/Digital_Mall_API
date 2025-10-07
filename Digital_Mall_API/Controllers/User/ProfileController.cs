@@ -139,11 +139,14 @@ namespace Digital_Mall_API.Controllers
             }
         }
 
-        [HttpPost("upload-picture")]
-        public async Task<ActionResult<ProfileDto>> UploadProfilePicture([FromForm] IFormFile file)
+        [HttpPost("Update-User-Picture")]
+        [Consumes("multipart/form-data")]
+
+        public async Task<ActionResult<ProfileDto>> UploadUserProfilePicture([FromForm] UploadProfilePictureDto model)
         {
             try
             {
+                var file = model.File;
                 if (file == null || file.Length == 0)
                 {
                     return BadRequest("No file uploaded");
