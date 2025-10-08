@@ -4,6 +4,7 @@ using Digital_Mall_API.Models.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Digital_Mall_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251007121303_fav")]
+    partial class fav
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -35,7 +38,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("GlobalCommission", (string)null);
+                    b.ToTable("GlobalCommission");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Financials.Payout", b =>
@@ -96,7 +99,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("PayeeUserId");
 
-                    b.ToTable("Payouts", (string)null);
+                    b.ToTable("Payouts");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Financials.ReelCommission", b =>
@@ -161,7 +164,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ReelId");
 
-                    b.ToTable("ReelCommissions", (string)null);
+                    b.ToTable("ReelCommissions");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Orders___Shopping.Order", b =>
@@ -231,7 +234,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Orders___Shopping.OrderItem", b =>
@@ -266,7 +269,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ProductVariantId");
 
-                    b.ToTable("OrderItems", (string)null);
+                    b.ToTable("OrderItems");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Orders___Shopping.RefundRequest", b =>
@@ -324,7 +327,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("OrderItemId");
 
-                    b.ToTable("RefundRequests", (string)null);
+                    b.ToTable("RefundRequests");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.PlatformSettings.PlatformSettings", b =>
@@ -357,7 +360,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PlatformSettings", (string)null);
+                    b.ToTable("PlatformSettings");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.Category", b =>
@@ -385,7 +388,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.Favorite", b =>
@@ -459,7 +462,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("SubCategoryId");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductImage", b =>
@@ -485,7 +488,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductImages", (string)null);
+                    b.ToTable("ProductImages");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductVariant", b =>
@@ -516,7 +519,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductVariants", (string)null);
+                    b.ToTable("ProductVariants");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.SubCategory", b =>
@@ -544,7 +547,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("SubCategories", (string)null);
+                    b.ToTable("SubCategories");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.Discount", b =>
@@ -555,10 +558,16 @@ namespace Digital_Mall_API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -567,7 +576,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Discounts", (string)null);
+                    b.ToTable("Discounts");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.ProductDiscount", b =>
@@ -594,7 +603,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductDiscounts", (string)null);
+                    b.ToTable("ProductDiscounts");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.PromoCode", b =>
@@ -643,7 +652,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PromoCodes", (string)null);
+                    b.ToTable("PromoCodes");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.PromoCodeUsage", b =>
@@ -681,7 +690,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("PromoCodeId");
 
-                    b.ToTable("PromoCodeUsages", (string)null);
+                    b.ToTable("PromoCodeUsages");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.Reel", b =>
@@ -754,35 +763,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("PostedByUserId");
 
-                    b.ToTable("Reels", (string)null);
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.ReelLike", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CustomerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("LikedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ReelId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReelId");
-
-                    b.HasIndex("CustomerId", "ReelId")
-                        .IsUnique();
-
-                    b.ToTable("ReelLikes", (string)null);
+                    b.ToTable("Reels");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.ReelProduct", b =>
@@ -797,7 +778,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ReelProducts", (string)null);
+                    b.ToTable("ReelProducts");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TShirtSize", b =>
@@ -817,7 +798,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TShirtSizes", (string)null);
+                    b.ToTable("TShirtSizes");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TShirtStyle", b =>
@@ -837,10 +818,10 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TShirtStyles", (string)null);
+                    b.ToTable("TShirtStyles");
                 });
 
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignOrderImage", b =>
+            modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignOrder", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -848,17 +829,68 @@ namespace Digital_Mall_API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("ChosenColor")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ChosenSize")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ChosenStyle")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CustomerDescription")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("CustomerId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CustomerImageUrl")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("TshirtDesignOrderId")
-                        .HasColumnType("int");
+                    b.Property<string>("CustomerUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("DesignerNotes")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("EstimatedDeliveryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FinalDesignUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("FinalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TshirtDesignOrderId");
+                    b.HasIndex("CustomerId");
 
                     b.HasIndex("CustomerUserId");
 
@@ -893,7 +925,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("TshirtDesignSubmissions", (string)null);
+                    b.ToTable("TshirtDesignSubmissions");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignSubmissionImage", b =>
@@ -916,50 +948,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("SubmissionId");
 
-                    b.ToTable("TshirtDesignSubmissionImage", (string)null);
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtOrderText", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("FontColor")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("FontFamily")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("FontSize")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("FontStyle")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("TshirtDesignOrderId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TshirtDesignOrderId");
-
-                    b.ToTable("TshirtOrderText");
+                    b.ToTable("TshirtDesignSubmissionImage");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtTemplate", b =>
@@ -991,7 +980,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TshirtTemplates", (string)null);
+                    b.ToTable("TshirtTemplates");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.ApplicationUser", b =>
@@ -1229,64 +1218,6 @@ namespace Digital_Mall_API.Migrations
                     b.ToTable("FashionModels", (string)null);
                 });
 
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.FollowingBrand", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("BrandId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("CustomerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("FollowedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BrandId");
-
-                    b.HasIndex("CustomerId", "BrandId")
-                        .IsUnique();
-
-                    b.ToTable("FollowingBrands", (string)null);
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.FollowingModel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CustomerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("FashionModelId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("FollowedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FashionModelId");
-
-                    b.HasIndex("CustomerId", "FashionModelId")
-                        .IsUnique();
-
-                    b.ToTable("FollowingModels", (string)null);
-                });
-
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.TshirtDesigner", b =>
                 {
                     b.Property<string>("Id")
@@ -1444,105 +1375,6 @@ namespace Digital_Mall_API.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
-                });
-
-            modelBuilder.Entity("TshirtDesignOrder", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ChosenColor")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("ChosenSize")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("ChosenStyle")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("CustomerDescription")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("CustomerId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("CustomerUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("DesignerNotes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime?>("EstimatedDeliveryDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FinalDesignUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("FinalPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<bool>("IsPaid")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("Length")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("RequestDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("TshirtBackImage")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("TshirtFrontImage")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("TshirtLeftImage")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("TshirtRightImage")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("TshirtType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<decimal>("Weight")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("CustomerUserId");
-
-                    b.ToTable("TshirtDesignOrders");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Financials.Payout", b =>
@@ -1806,25 +1638,6 @@ namespace Digital_Mall_API.Migrations
                     b.Navigation("PostedByFashionModel");
                 });
 
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.ReelLike", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Digital_Mall_API.Models.Entities.Reels___Content.Reel", "Reel")
-                        .WithMany()
-                        .HasForeignKey("ReelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("Reel");
-                });
-
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.ReelProduct", b =>
                 {
                     b.HasOne("Digital_Mall_API.Models.Entities.Product_Catalog.Product", "Product")
@@ -1844,20 +1657,24 @@ namespace Digital_Mall_API.Migrations
                     b.Navigation("Reel");
                 });
 
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignOrderImage", b =>
+            modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignOrder", b =>
                 {
-                    b.HasOne("TshirtDesignOrder", "Order")
-                        .WithMany("Images")
-                        .HasForeignKey("TshirtDesignOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.Customer", null)
+                        .WithMany("DesignOrders")
+                        .HasForeignKey("CustomerId");
+
+                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.Customer", "CustomerUser")
+                        .WithMany()
+                        .HasForeignKey("CustomerUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.Navigation("Order");
+                    b.Navigation("CustomerUser");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignSubmission", b =>
                 {
-                    b.HasOne("TshirtDesignOrder", "Order")
+                    b.HasOne("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignOrder", "Order")
                         .WithMany()
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1928,21 +1745,6 @@ namespace Digital_Mall_API.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("TshirtDesignOrder", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.Customer", null)
-                        .WithMany("DesignOrders")
-                        .HasForeignKey("CustomerId");
-
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.Customer", "CustomerUser")
-                        .WithMany()
-                        .HasForeignKey("CustomerUserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("CustomerUser");
-                });
-
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Orders___Shopping.Order", b =>
                 {
                     b.Navigation("OrderItems");
@@ -2001,8 +1803,6 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.Brand", b =>
                 {
-                    b.Navigation("Followers");
-
                     b.Navigation("OrderItems");
 
                     b.Navigation("Payouts");
@@ -2016,27 +1816,14 @@ namespace Digital_Mall_API.Migrations
                 {
                     b.Navigation("DesignOrders");
 
-                    b.Navigation("FollowingBrands");
-
-                    b.Navigation("FollowingModels");
-
                     b.Navigation("Orders");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.User___Authentication.FashionModel", b =>
                 {
-                    b.Navigation("Followers");
-
                     b.Navigation("Payouts");
 
                     b.Navigation("Reels");
-                });
-
-            modelBuilder.Entity("TshirtDesignOrder", b =>
-                {
-                    b.Navigation("Images");
-
-                    b.Navigation("Texts");
                 });
 #pragma warning restore 612, 618
         }

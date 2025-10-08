@@ -1,5 +1,6 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.DTOs.DesignerAdminDTOs;
+using Digital_Mall_API.Models.DTOs.UserDTOs;
 using Digital_Mall_API.Models.Entities.T_Shirt_Customization;
 using Digital_Mall_API.Services;
 using Microsoft.AspNetCore.Http;
@@ -76,6 +77,8 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
         {
             var order = await context.TshirtDesignOrders
                 .Include(o => o.CustomerUser)
+                .Include(o => o.Images)  // صور الديزاين
+                .Include(o => o.Texts)   // النصوص
                 .FirstOrDefaultAsync(o => o.Id == id);
 
             if (order == null) return NotFound();
@@ -83,61 +86,88 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
             return new TshirtDesignOrderDto
             {
                 Id = order.Id,
-                CustomerName = order.CustomerUser.FullName,
-                CustomerEmail = order.CustomerUser.Email,
+                CustomerName = order.CustomerUser?.FullName,
+                CustomerEmail = order.CustomerUser?.Email,
                 ChosenColor = order.ChosenColor,
                 ChosenStyle = order.ChosenStyle,
                 ChosenSize = order.ChosenSize,
+                TshirtType = order.TshirtType,
+                Length = order.Length,
+                Weight = order.Weight,
                 CustomerDescription = order.CustomerDescription,
-                CustomerImageUrl = order.CustomerImageUrl,
+
+                // صور التيشيرت
+                TshirtFrontImageUrl = order.TshirtFrontImage,
+                TshirtBackImageUrl = order.TshirtBackImage,
+                TshirtLeftImageUrl = order.TshirtLeftImage,
+                TshirtRightImageUrl = order.TshirtRightImage,
+
+                // صور الديزاين
+                CustomerImageUrls = order.Images.Select(i => i.ImageUrl).ToList(),
+
+                Texts = order.Texts.Select(t => new AddOrderTextDto
+                {
+                    Text = t.Text,
+                    FontFamily = t.FontFamily,
+                    FontColor = t.FontColor,
+                    FontSize = t.FontSize,
+                    FontStyle = t.FontStyle
+                }).ToList(),
+
                 FinalDesignUrl = order.FinalDesignUrl,
+                DesignerNotes = order.DesignerNotes,
                 Status = order.Status,
+                FinalPrice = order.FinalPrice,
+                EstimatedDeliveryDate = order.EstimatedDeliveryDate,
+                IsPaid = order.IsPaid,
                 RequestDate = order.RequestDate
             };
         }
 
 
-        [HttpPost]
-        public async Task<ActionResult<TshirtDesignOrderDto>> Create(TshirtDesignOrderCreateDto dto)
-        {
-            var order = new TshirtDesignOrder
-            {
-                CustomerUserId = dto.CustomerUserId,
-                ChosenColor = dto.ChosenColor,
-                ChosenStyle = dto.ChosenStyle,
-                ChosenSize = dto.ChosenSize,
-                CustomerDescription = dto.CustomerDescription,
-                CustomerImageUrl = dto.CustomerImageUrl,
-                Status = "Pending",
-                FinalPrice = 0,
-                IsPaid = false,
-                RequestDate = DateTime.UtcNow
-            };
-
-            context.TshirtDesignOrders.Add(order);
-            await context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, TshirtDesignOrderUpdateDto dto)
-        {
-            var order = await context.TshirtDesignOrders.FindAsync(id);
-            if (order == null) return NotFound();
-
-            order.ChosenColor = dto.ChosenColor;
-            order.ChosenStyle = dto.ChosenStyle;
-            order.ChosenSize = dto.ChosenSize;
-            order.CustomerDescription = dto.CustomerDescription;
-            order.CustomerImageUrl = dto.CustomerImageUrl;
-            order.Status = dto.Status;
 
 
-            await context.SaveChangesAsync();
+        //[HttpPost]
+        //public async Task<ActionResult<TshirtDesignOrderDto>> Create(TshirtDesignOrderCreateDto dto)
+        //{
+        //    var order = new TshirtDesignOrder
+        //    {
+        //        CustomerUserId = dto.CustomerUserId,
+        //        ChosenColor = dto.ChosenColor,
+        //        ChosenStyle = dto.ChosenStyle,
+        //        ChosenSize = dto.ChosenSize,
+        //        CustomerDescription = dto.CustomerDescription,
+        //        CustomerImageUrl = dto.CustomerImageUrl,
+        //        Status = "Pending",
+        //        FinalPrice = 0,
+        //        IsPaid = false,
+        //        RequestDate = DateTime.UtcNow
+        //    };
 
-            return NoContent();
-        }
+        //    context.TshirtDesignOrders.Add(order);
+        //    await context.SaveChangesAsync();
+
+        //    return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
+        //}
+
+        //[HttpPut("{id}")]
+        //public async Task<IActionResult> Update(int id, TshirtDesignOrderUpdateDto dto)
+        //{
+        //    var order = await context.TshirtDesignOrders.FindAsync(id);
+        //    if (order == null) return NotFound();
+
+        //    order.ChosenColor = dto.ChosenColor;
+        //    order.ChosenStyle = dto.ChosenStyle;
+        //    order.ChosenSize = dto.ChosenSize;
+        //    order.CustomerDescription = dto.CustomerDescription;
+        //    order.CustomerImageUrl = dto.CustomerImageUrl;
+        //    order.Status = dto.Status;
+
+
+        //    await context.SaveChangesAsync();
+
+        //    return NoContent();
+        //}
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
