@@ -118,19 +118,19 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                                     ProfilePictureUrl = user.ProfilePictureUrl,
                                     Status = customer.Status,
                                     CreatedAt = customer.CreatedAt,
-                                    OrdersCount = customer.Orders.Count(o => o.Status == "completed" || o.Status == "delivered"),
+                                    OrdersCount = customer.Orders.Count(o => o.Status == "Delivered"),
                                     TotalSpent = customer.Orders
-                                        .Where(o => o.Status == "completed" || o.Status == "delivered")
+                                        .Where(o => o.Status == "Delivered")
                                         .Sum(o => (decimal?)o.TotalAmount) ?? 0m,
                                     DesignOrdersCount = customer.DesignOrders.Count,
                                     LastOrderDate = customer.Orders
-                                        .Where(o => o.Status == "completed" || o.Status == "delivered")
+                                        .Where(o => o.Status == "Delivered")
                                         .OrderByDescending(o => o.OrderDate)
                                         .Select(o => (DateTime?)o.OrderDate)
                                         .FirstOrDefault(),
                                     AverageOrderValue = customer.Orders.Count > 0 ?
                                         customer.Orders
-                                            .Where(o => o.Status == "completed" || o.Status == "delivered")
+                                            .Where(o => o.Status == "Delivered")
                                             .Average(o => (decimal?)o.TotalAmount) ?? 0m : 0m
                                 })
                                 .FirstOrDefaultAsync();

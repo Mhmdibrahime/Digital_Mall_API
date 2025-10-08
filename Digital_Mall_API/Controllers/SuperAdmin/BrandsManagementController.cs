@@ -24,7 +24,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         public async Task<IActionResult> GetBrandsSummary()
         {
             var totalBrands = await _context.Brands.CountAsync();
-            var activeBrands = await _context.Brands.CountAsync(b => b.Status == "Approved");
+            var activeBrands = await _context.Brands.CountAsync(b => b.Status == "Active");
             var pendingBrands = await _context.Brands.CountAsync(b => b.Status == "Pending");
             var suspendedBrands = await _context.Brands.CountAsync(b => b.Status == "Suspended"); 
 
@@ -74,7 +74,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 switch (status.ToLower())
                 {
                     case "Active":
-                        query = query.Where(b => b.Status == "Approved");
+                        query = query.Where(b => b.Status == "Active");
                         break;
                     case "Pending":
                         query = query.Where(b => b.Status == "Pending");

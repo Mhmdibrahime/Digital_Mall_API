@@ -180,17 +180,17 @@ namespace Digital_Mall_API.Controllers.Account
 
             
             var brand = await _context.Brands.FindAsync(user.Id.ToString());
-            if (brand != null && brand.Status != "Approved")
+            if (brand != null && brand.Status != "Active")
                 return Unauthorized("Your account is not yet approved by admin.");
 
             
             var model = await _context.FashionModels.FindAsync(user.Id.ToString());
-            if (model != null && model.Status != "Approved")
+            if (model != null && model.Status != "Active")
                 return Unauthorized("Your account is not yet approved by admin.");
 
 
             var designer = await _context.TshirtDesigners.FindAsync(user.Id.ToString());
-            if (model != null && model.Status != "Approved")
+            if (model != null && model.Status != "Active")
                 return Unauthorized("Your account is not yet approved by admin.");
 
             var customer = await _context.Customers.FindAsync(user.Id.ToString());
@@ -220,7 +220,7 @@ namespace Digital_Mall_API.Controllers.Account
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Value.SecretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var expires = DateTime.UtcNow.AddMinutes(120);
+            var expires = DateTime.UtcNow.AddDays(7);
 
             var token = new JwtSecurityToken(
                 issuer: _jwtSettings.Value.Issuer,
