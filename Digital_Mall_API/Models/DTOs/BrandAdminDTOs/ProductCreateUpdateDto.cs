@@ -7,7 +7,9 @@
         public decimal Price { get; set; }
         public bool IsActive { get; set; }
         public int SubCategoryId { get; set; }
+        public string Gender { get; set; }
         public List<ProductVariantCreateUpdateDto> Variants { get; set; } = new();
+
     }
 
 }

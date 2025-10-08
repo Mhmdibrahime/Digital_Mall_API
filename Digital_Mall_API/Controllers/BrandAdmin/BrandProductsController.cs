@@ -142,6 +142,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 IsActive = dto.IsActive,
                 BrandId = brandId,
                 SubCategoryId = dto.SubCategoryId,
+                Gender=dto.Gender,
                 Variants = dto.Variants.Select(v => new ProductVariant
                 {
                     Color = v.Color,

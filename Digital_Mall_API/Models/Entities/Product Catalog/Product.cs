@@ -32,7 +32,8 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         public bool IsTrend { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int? ProductDiscountId { get; set; }
-
+        [StringLength(20)]
+        public string Gender { get; set; } = "Unisex";
         public virtual Brand? Brand { get; set; }
         public virtual SubCategory? SubCategory { get; set; }
         public virtual ProductDiscount? ProductDiscount { get; set; } 
@@ -42,5 +43,4 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         public virtual List<ReelProduct> ReelProducts { get; set; } = new List<ReelProduct>();
         public ICollection<Favorite>? Favorites { get; set; }
     }
-
 }
