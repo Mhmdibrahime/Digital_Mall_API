@@ -23,10 +23,10 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         {
             var totalDiscounts = await _context.Discounts.CountAsync();
             var activeDiscounts = await _context.Discounts
-                .Where(d => d.Status == "Active" && d.EndDate >= DateTime.UtcNow)
+                .Where(d => d.Status == "Active" )
                 .CountAsync();
             var inactiveDiscounts = await _context.Discounts
-                .Where(d => d.Status == "Inactive" || d.EndDate < DateTime.UtcNow)
+                .Where(d => d.Status == "Inactive" )
                 .CountAsync();
             var promoCodes = await _context.PromoCodes
                 

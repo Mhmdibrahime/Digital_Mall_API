@@ -37,8 +37,8 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         public virtual SubCategory? SubCategory { get; set; }
         public virtual ProductDiscount? ProductDiscount { get; set; } 
 
-        public virtual List<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
+        public virtual List<ProductVariant>? Variants { get; set; } = new List<ProductVariant>();
         public virtual List<ProductImage> Images { get; set; } = new List<ProductImage>();
-        public virtual List<ReelProduct> ReelProducts { get; set; } = new List<ReelProduct>();
+        public virtual List<ReelProduct>? ReelProducts { get; set; } = new List<ReelProduct>();
     }
 }

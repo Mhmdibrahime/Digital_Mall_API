@@ -13,6 +13,5 @@
         public int ReelsCount { get; set; }
         public int TotalLikes { get; set; }
         public decimal TotalEarnings { get; set; }
-        public decimal PerformanceScore { get; set; }
     }
 }

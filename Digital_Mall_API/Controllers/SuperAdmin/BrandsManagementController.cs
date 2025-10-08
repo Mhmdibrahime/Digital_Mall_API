@@ -186,7 +186,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 return BadRequest("Commission rate must be between 0 and 100");
             }
 
-            var brand = await _context.Brands.FindAsync(id);
+            var brand = await _context.Brands.FindAsync(id.ToString());
             if (brand == null)
             {
                 return NotFound();
@@ -199,9 +199,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteBrand(string id)
+        public async Task<IActionResult> DeleteBrand(Guid id)
         {
-            var brand = await _context.Brands.FindAsync(id);
+            var brand = await _context.Brands.FindAsync(id.ToString());
             var user = await _context.Users.FindAsync(id);
 
             if (brand == null || user == null)
@@ -210,11 +210,11 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             }
 
             
-            var hasProducts = await _context.Products.AnyAsync(p => p.BrandId == id);
+            var hasProducts = await _context.Products.AnyAsync(p => p.BrandId == id.ToString());
 
             
             var hasOrders = await _context.OrderItems
-                .AnyAsync(oi => oi.BrandId == id);
+                .AnyAsync(oi => oi.BrandId == id.ToString());
 
             if (hasProducts || hasOrders)
             {

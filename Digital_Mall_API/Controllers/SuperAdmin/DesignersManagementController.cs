@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace Digital_Mall_API.Controllers.SuperAdmin
 {
@@ -38,44 +39,44 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             });
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetDesigners(
-            [FromQuery] string? search,
-            [FromQuery] string? status,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
+        [HttpGet("GetDesigners")]
+        public async Task<IActionResult> GetDesigners(string? search, string? status, int page = 1, int pageSize = 20)
         {
-            var query = _context.TshirtDesigners
-                .AsQueryable();
+            var query =
+                from d in _context.TshirtDesigners
+                join u in _context.Users on d.Id equals u.Id.ToString() into userGroup
+                from u in userGroup.DefaultIfEmpty() // Left join — allows designers without a user
+                select new
+                {
+                    Designer = d,
+                    User = u
+                };
 
             if (!string.IsNullOrEmpty(search))
-            {
-                query = query.Where(d =>
-                    d.FullName.Contains(search));
-            }
+                query = query.Where(x => x.Designer.FullName.Contains(search));
 
             if (!string.IsNullOrEmpty(status) && status != "All Statuses")
-            {
-                query = query.Where(d => d.Status == status);
-            }
+                query = query.Where(x => x.Designer.Status == status);
 
+            // Count total results (before pagination)
             var totalCount = await query.CountAsync();
 
-            query = query.OrderByDescending(d => d.CreatedAt);
-
+            // Fetch paginated data
             var designers = await query
+                .OrderByDescending(x => x.Designer.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(d => new DesignerDto
+                .Select(x => new DesignerDto
                 {
-                    Id = d.Id,
-                    UserName = d.FullName,
-                    Email = _context.Users.Find(d.Id).Email ?? "Not Found",
-                    Status = d.Status,
-                    CreatedAt = d.CreatedAt,
-                    AssignedRequests = _context.TshirtDesignOrders.Count(dr => dr.Status != "Completed"),
+                    Id = x.Designer.Id,
+                    UserName = x.Designer.FullName,
+                    Email = x.User != null ? x.User.Email : "Not Found",
+                    Status = x.Designer.Status,
+                    CreatedAt = x.Designer.CreatedAt,
+                    AssignedRequests = _context.TshirtDesignOrders
+                        .Count(dr => dr.Status != "Completed"),
                     TotalEarnings = _context.Payouts
-                        .Where(p => p.PayeeUserId.ToString() == d.Id && p.Status == "Completed")
+                        .Where(p => p.PayeeUserId.ToString() == x.Designer.Id && p.Status == "Completed")
                         .Sum(p => (decimal?)p.Amount) ?? 0m
                 })
                 .ToListAsync();
@@ -89,6 +90,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 Designers = designers
             });
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetDesignerDetails(string id)

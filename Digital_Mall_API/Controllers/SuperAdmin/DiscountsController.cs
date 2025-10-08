@@ -13,10 +13,11 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
     public class DiscountsController : ControllerBase
     {
         private readonly AppDbContext _context;
-
-        public DiscountsController(AppDbContext context)
+        private readonly IWebHostEnvironment _env;
+        public DiscountsController(AppDbContext context,IWebHostEnvironment _env)
         {
             _context = context;
+            this._env = _env;
         }
 
         [HttpGet("Summary")]
@@ -36,8 +37,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
         [HttpGet]
         public async Task<IActionResult> GetDiscounts(
-            [FromQuery] string? status,
-            [FromQuery] string? search,
+            [FromQuery] string? status
+            ,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
@@ -48,26 +49,20 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 query = query.Where(d => d.Status == status);
             }
 
-            if (!string.IsNullOrEmpty(search))
-            {
-                query = query.Where(d =>
-                    
-                    d.Description.Contains(search));
-            }
+            
 
             var totalCount = await query.CountAsync();
 
             var discounts = await query
-                .OrderByDescending(d => d.StartDate)
+                
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(d => new DiscountDto
                 {
                     Id = d.Id,
-                    Description = d.Description,
+                    ImageUrl = d.ImageUrl,
                     Status = d.Status,
-                    StartDate = d.StartDate,
-                    EndDate = d.EndDate,
+                    
                 })
                 .ToListAsync();
 
@@ -88,10 +83,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 .Select(d => new DiscountDetailDto
                 {
                     Id = d.Id,
-                    Description = d.Description,
+                    ImageUrl = d.ImageUrl,
                     Status = d.Status,
-                    StartDate = d.StartDate,
-                    EndDate = d.EndDate,
+                  
                    
                 })
                 .FirstOrDefaultAsync(d => d.Id == id);
@@ -103,26 +97,49 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
             return Ok(discount);
         }
-
         [HttpPost]
-        public async Task<IActionResult> CreateDiscount([FromBody] CreateDiscountRequest request)
+        [Consumes("multipart/form-data")] 
+        public async Task<IActionResult> CreateDiscount([FromForm] CreateDiscountRequest request) 
         {
-            var discount = new Discount
+            if (request.File == null || request.File.Length == 0)
+                return BadRequest("No file uploaded");
+
+            try
             {
-                Description = request.Description,
-                Status = request.Status,
-                StartDate = request.StartDate,
-                EndDate = request.EndDate,
-            };
+                var discount = new Discount
+                {
+                    Status = request.Status,
+                };
 
-            _context.Discounts.Add(discount);
-            await _context.SaveChangesAsync();
+                var fileName = $"{Guid.NewGuid()}_{request.File.FileName}";
+                var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "discounts");
+                var filePath = Path.Combine(uploadsFolder, fileName);
 
-            return CreatedAtAction(nameof(GetDiscount), new { id = discount.Id }, discount);
+                Directory.CreateDirectory(uploadsFolder);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await request.File.CopyToAsync(stream);
+                }
+
+               
+                discount.ImageUrl = $"/uploads/discounts/{fileName}";
+
+                _context.Discounts.Add(discount);
+                await _context.SaveChangesAsync();
+
+                return CreatedAtAction(nameof(GetDiscount), new { id = discount.Id }, discount);
+            }
+            catch (Exception ex)
+            {
+                
+                return StatusCode(500, "An error occurred while creating the discount");
+            }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateDiscount(int id, [FromBody] UpdateDiscountRequest request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateDiscount(int id, [FromForm] UpdateDiscountRequest request)
         {
             var discount = await _context.Discounts.FindAsync(id);
             if (discount == null)
@@ -130,17 +147,48 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 return NotFound();
             }
 
-            discount.Description = request.Description;
-            discount.Status = request.Status;
-            discount.StartDate = request.StartDate;
-            discount.EndDate = request.EndDate;
+            try
+            {
+               
+                discount.Status = request.Status;
 
-            await _context.SaveChangesAsync();
+                if (request.File != null && request.File.Length > 0)
+                {
+                    if (!string.IsNullOrEmpty(discount.ImageUrl))
+                    {
+                        var oldImagePath = Path.Combine(_env.WebRootPath, discount.ImageUrl.TrimStart('/'));
+                        if (System.IO.File.Exists(oldImagePath))
+                        {
+                            System.IO.File.Delete(oldImagePath);
+                        }
+                    }
 
-            return Ok(new { Message = "Discount updated successfully" });
+                    var fileName = $"{Guid.NewGuid()}_{request.File.FileName}";
+                    var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "discounts");
+                    var filePath = Path.Combine(uploadsFolder, fileName);
+
+                    Directory.CreateDirectory(uploadsFolder);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await request.File.CopyToAsync(stream);
+                    }
+
+                    discount.ImageUrl = $"/uploads/discounts/{fileName}";
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { Message = "Discount updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                return StatusCode(500, "An error occurred while updating the discount");
+            }
         }
 
-        
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDiscount(int id)

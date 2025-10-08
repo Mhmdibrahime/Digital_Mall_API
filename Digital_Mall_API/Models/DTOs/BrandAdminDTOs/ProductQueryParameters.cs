@@ -2,7 +2,7 @@
 {
     public class ProductQueryParameters
     {
-        public string Search { get; set; }
+        public string? Search { get; set; }
         public int? CategoryId { get; set; }
         public int? SubCategoryId { get; set; }
         public bool? InStock { get; set; }

@@ -95,7 +95,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     TotalEarnings = m.Payouts
                         .Where(p => p.Status == "Completed")
                         .Sum(p => (decimal?)p.Amount) ?? 0m,
-                    PerformanceScore = CalculatePerformanceScore(m.Id, m.Reels.Sum(r => r.LikesCount))
+
                 })
                 .ToListAsync();
 
@@ -137,8 +137,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     PendingEarnings = m.Payouts
                         .Where(p => p.Status == "Pending")
                         .Sum(p => (decimal?)p.Amount) ?? 0m,
-                    PerformanceScore = CalculatePerformanceScore(m.Id, m.Reels.Sum(r => r.LikesCount))                   
-                   
+                  
+
+
                 })
                 .FirstOrDefaultAsync(m => m.Id == id);
 
@@ -266,14 +267,20 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             return Ok(options);
         }
 
-        
 
-        private decimal CalculatePerformanceScore(string modelId, int totalLikes)
+
+        private async Task<decimal> CalculatePerformanceScore(string modelId)
         {
-            var reelsCount = _context.Reels.Count(r => r.PostedByUserId == modelId);
-            var earnings = _context.Payouts
+            var totalLikes = await _context.Reels
+                .Where(r => r.PostedByUserId == modelId)
+                .SumAsync(r => (int?)r.LikesCount) ?? 0;
+
+            var reelsCount = await _context.Reels
+                .CountAsync(r => r.PostedByUserId == modelId);
+
+            var earnings = await _context.Payouts
                 .Where(p => p.PayeeUserId.ToString() == modelId && p.Status == "Completed")
-                .Sum(p => (decimal?)p.Amount) ?? 0m;
+                .SumAsync(p => (decimal?)p.Amount) ?? 0m;
 
             return totalLikes + (reelsCount * 100) + (earnings * 10);
         }

@@ -4,6 +4,7 @@ using Digital_Mall_API.Models.Entities.Product_Catalog;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System.Security.Claims;
 
 namespace Digital_Mall_API.Controllers.BrandAdmin
@@ -14,14 +15,16 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly ILogger<BrandProductsController> _logger;
 
-        public BrandProductsController(AppDbContext context, IWebHostEnvironment env)
+        public BrandProductsController(AppDbContext context, IWebHostEnvironment env, ILogger<BrandProductsController> logger)
         {
             _context = context;
             _env = env;
+            _logger = logger;
         }
 
-       
+
         [HttpGet("All")]
         public async Task<ActionResult> GetAll([FromQuery] ProductQueryParameters parameters)
         {
@@ -141,14 +144,25 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
         [HttpPost("Add")]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult> Create([FromForm] ProductCreateUpdateDto dto, List<IFormFile> images)
+        public async Task<ActionResult> Create(
+    [FromForm] ProductCreateDto dto,
+    [FromQuery] string pVariantsJson 
+)
         {
+            
             var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(brandId))
                 return Unauthorized("Brand identifier not found in token");
 
             try
             {
+
+                var PVariants = new List<VariantCreateDto>();
+                if (!string.IsNullOrEmpty(pVariantsJson))
+                {
+                    PVariants = JsonConvert.DeserializeObject<List<VariantCreateDto>>(pVariantsJson);
+                }
+
                 var product = new Product
                 {
                     Name = dto.Name,
@@ -156,19 +170,30 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     Price = dto.Price,
                     IsActive = dto.IsActive,
                     BrandId = brandId,
-                    SubCategoryId = dto.SubCategoryId,
-                    Variants = dto.Variants.Select(v => new ProductVariant
-                    {
-                        Color = v.Color,
-                        Size = v.Size,
-                        StockQuantity = v.StockQuantity,
-                    }).ToList()
+                    SubCategoryId = dto.SubCategoryId
                 };
 
+                _context.Products.Add(product);
+                await _context.SaveChangesAsync();
 
-                if (images != null && images.Count > 0)
+                if (PVariants != null && PVariants.Any())
                 {
-                    foreach (var file in images)
+                    foreach (var variantDto in PVariants)
+                    {
+                        _context.ProductVariants.Add(new ProductVariant
+                        {
+                            ProductId = product.Id,
+                            Color = variantDto.Color,
+                            Size = variantDto.Size,
+                            StockQuantity = variantDto.StockQuantity
+                        });
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
+                if (dto.Images != null && dto.Images.Count > 0)
+                {
+                    foreach (var file in dto.Images)
                     {
                         var fileName = $"{Guid.NewGuid()}_{file.FileName}";
                         var path = Path.Combine(_env.WebRootPath, "uploads", "products", fileName);
@@ -177,51 +202,81 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                         using var stream = new FileStream(path, FileMode.Create);
                         await file.CopyToAsync(stream);
 
-                        product.Images.Add(new ProductImage { ImageUrl = $"/uploads/products/{fileName}" });
+                        _context.ProductImages.Add(new ProductImage
+                        {
+                            ProductId = product.Id,
+                            ImageUrl = $"/uploads/products/{fileName}"
+                        });
                     }
+                    await _context.SaveChangesAsync();
                 }
-
-                _context.Products.Add(product);
-                await _context.SaveChangesAsync();
 
                 return Ok(new { product.Id, product.Name });
             }
             catch (Exception ex)
             {
-                return BadRequest("An Error occured while adding the product");
+                _logger.LogError(ex, "Error adding product");
+                return BadRequest("An error occurred while adding the product");
             }
         }
-      
+
+
+
         [HttpPut("Update/{id}")]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult> Update(int id, [FromForm] ProductCreateUpdateDto dto, List<IFormFile> images)
+        public async Task<ActionResult> Update(
+    int id,
+    [FromForm] ProductCreateDto dto,
+    [FromQuery] string pVariantsJson
+)
         {
             var product = await _context.Products
                 .Include(p => p.Variants)
                 .Include(p => p.Images)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (product == null) return NotFound();
-            try {
+            if (product == null)
+                return NotFound("Product not found");
+
+            try
+            {
+                // Deserialize variants from JSON query parameter
+                var PVariants = new List<VariantCreateDto>();
+                if (!string.IsNullOrEmpty(pVariantsJson))
+                {
+                    PVariants = JsonConvert.DeserializeObject<List<VariantCreateDto>>(pVariantsJson);
+                }
+
+                // Update product basic fields
                 product.Name = dto.Name;
                 product.Description = dto.Description;
                 product.Price = dto.Price;
                 product.IsActive = dto.IsActive;
                 product.SubCategoryId = dto.SubCategoryId;
 
+                // Remove old variants and add new ones
                 _context.ProductVariants.RemoveRange(product.Variants);
-                product.Variants = dto.Variants.Select(v => new ProductVariant
+                if (PVariants != null && PVariants.Any())
                 {
-                    Color = v.Color,
-                    Size = v.Size,
-                    StockQuantity = v.StockQuantity,
-                }).ToList();
+                    foreach (var variantDto in PVariants)
+                    {
+                        _context.ProductVariants.Add(new ProductVariant
+                        {
+                            ProductId = product.Id,
+                            Color = variantDto.Color,
+                            Size = variantDto.Size,
+                            StockQuantity = variantDto.StockQuantity
+                        });
+                    }
+                }
 
-                if (images != null && images.Count > 0)
+                // Handle product images
+                if (dto.Images != null && dto.Images.Count > 0)
                 {
+                    // Remove old images
                     _context.ProductImages.RemoveRange(product.Images);
 
-                    foreach (var file in images)
+                    foreach (var file in dto.Images)
                     {
                         var fileName = $"{Guid.NewGuid()}_{file.FileName}";
                         var path = Path.Combine(_env.WebRootPath, "uploads", "products", fileName);
@@ -230,21 +285,25 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                         using var stream = new FileStream(path, FileMode.Create);
                         await file.CopyToAsync(stream);
 
-                        product.Images.Add(new ProductImage { ImageUrl = $"/uploads/products/{fileName}" });
+                        _context.ProductImages.Add(new ProductImage
+                        {
+                            ProductId = product.Id,
+                            ImageUrl = $"/uploads/products/{fileName}"
+                        });
                     }
                 }
 
                 await _context.SaveChangesAsync();
-                return Ok();
+                return Ok(new { Message = "Product updated successfully", product.Id });
             }
             catch (Exception ex)
             {
-                return BadRequest("An Error occured while updating the product");
+                _logger.LogError(ex, "Error updating product");
+                return BadRequest("An error occurred while updating the product");
             }
-            
         }
 
-      
+
         [HttpDelete("Delete/{id}")]
         public async Task<ActionResult> Delete(int id)
         {
@@ -263,6 +322,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
             return Ok();
         }
+
+        
     }
 
 

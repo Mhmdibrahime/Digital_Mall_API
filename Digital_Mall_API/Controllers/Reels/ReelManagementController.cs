@@ -520,6 +520,7 @@ namespace Digital_Mall_API.Controllers.Reels
         public int ProductId { get; set; }
         public string ProductName { get; set; }
         public decimal ProductPrice { get; set; }
+        public string ProductImageUrl { get; set; } 
     }
 
     public class ReelDetailDto
