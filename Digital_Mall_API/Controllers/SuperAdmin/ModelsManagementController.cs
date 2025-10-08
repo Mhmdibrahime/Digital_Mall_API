@@ -110,9 +110,13 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetModelDetails(string id)
+        public async Task<IActionResult> GetModelDetails(Guid id)
         {
             var user = await _context.Users.FindAsync(id);
+            if(user == null)
+            {
+                return NotFound("User not found");
+            }
             var model = await _context.FashionModels
                 .Include(m => m.Reels)
                 .Include(m => m.Payouts)
@@ -141,7 +145,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
 
                 })
-                .FirstOrDefaultAsync(m => m.Id == id);
+                .FirstOrDefaultAsync(m => m.Id == id.ToString());
 
             if (model == null)
             {
@@ -152,10 +156,10 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         [HttpGet("{id}/ModelReels")]
-        public async Task<IActionResult> GetModelReels(string id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetModelReels(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             var reels = await _context.Reels
-                .Where(r => r.PostedByUserId == id)
+                .Where(r => r.PostedByUserId == id.ToString())
                 .OrderByDescending(r => r.PostedDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -172,7 +176,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 })
                 .ToListAsync();
 
-            var totalCount = await _context.Reels.CountAsync(r => r.PostedByUserId == id);
+            var totalCount = await _context.Reels.CountAsync(r => r.PostedByUserId == id.ToString());
 
             return Ok(new
             {
@@ -187,7 +191,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         [HttpPut("{id}/UpdateStatus")]
         public async Task<IActionResult> UpdateModelStatus(Guid id, [FromBody] string status)
         {
-            var model = await _context.FashionModels.FindAsync(id);
+            var model = await _context.FashionModels.FindAsync(id.ToString());
             if (model == null)
             {
                 return NotFound();
@@ -207,7 +211,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 return BadRequest("Commission rate must be between 0 and 100");
             }
 
-            var model = await _context.FashionModels.FindAsync(id);
+            var model = await _context.FashionModels.FindAsync(id.ToString());
             if (model == null)
             {
                 return NotFound();
@@ -220,18 +224,18 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteModel(string id)
+        public async Task<IActionResult> DeleteModel(Guid id)
         {
             var model = await _context.FashionModels
-                .FirstOrDefaultAsync(m => m.Id == id);
+                .FirstOrDefaultAsync(m => m.Id == id.ToString());
 
             if (model == null)
             {
                 return NotFound();
             }
 
-            var hasReels = await _context.Reels.AnyAsync(r => r.PostedByUserId == id);
-            var hasPayouts = await _context.Payouts.AnyAsync(p => p.PayeeUserId.ToString() == id && p.Status == "Pending");
+            var hasReels = await _context.Reels.AnyAsync(r => r.PostedByUserId == id.ToString());
+            var hasPayouts = await _context.Payouts.AnyAsync(p => p.PayeeUserId.ToString() == id.ToString() && p.Status == "Pending");
 
             if (hasReels || hasPayouts)
             {

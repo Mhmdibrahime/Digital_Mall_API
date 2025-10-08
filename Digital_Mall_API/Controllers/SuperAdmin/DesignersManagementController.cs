@@ -16,11 +16,15 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
     {
         private readonly AppDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole<Guid>> _roleManager;
 
-        public DesignersManagementController(AppDbContext context, UserManager<ApplicationUser> userManager)
+
+        public DesignersManagementController(AppDbContext context, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole<Guid>> roleManager)
         {
             _context = context;
             _userManager = userManager;
+            _roleManager = roleManager;
+
         }
 
         // GET: Super/Management/DesignersManagement/Summary
@@ -93,36 +97,37 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetDesignerDetails(string id)
+        public async Task<IActionResult> GetDesignerDetails(Guid id)
         {
-            var designer = await _context.TshirtDesigners
-                .Select(d => new DesignerDetailDto
-                {
-                    Id = d.Id,
-                    UserName = d.FullName,
-                    Email = _context.Users.Find(d.Id).Email ?? "Not Found",
-                    PhoneNumber = _context.Users.Find(d.Id).PhoneNumber ?? "Not Found",
-                    ProfilePictureUrl = _context.Users.Find(d.Id).ProfilePictureUrl ?? "Not Found",
-                    Status = d.Status,
-                    CreatedAt = d.CreatedAt,
-                    AssignedRequests = _context.TshirtDesignOrders.Count(dr => dr.Status != "Completed"),
-                    CompletedRequests = _context.TshirtDesignOrders.Count(dr => dr.Status == "Completed"),
-                    TotalEarnings = _context.Payouts
-                        .Where(p => p.PayeeUserId.ToString() == d.Id && p.Status == "Completed")
-                        .Sum(p => (decimal?)p.Amount) ?? 0m,
-                   
-                })
-                .FirstOrDefaultAsync(d => d.Id == id);
+            var designerEntity = await _context.TshirtDesigners
+                .FirstOrDefaultAsync(d => d.Id == id.ToString());
 
-            if (designer == null)
-            {
+            if (designerEntity == null)
                 return NotFound();
-            }
+
+            var user = await _context.Users.FindAsync(id);
+
+            var designer = new DesignerDetailDto
+            {
+                Id = designerEntity.Id,
+                UserName = designerEntity.FullName,
+                Email = user?.Email ?? "Not Found",
+                PhoneNumber = user?.PhoneNumber ?? "Not Found",
+                ProfilePictureUrl = user?.ProfilePictureUrl ?? "Not Found",
+                Status = designerEntity.Status,
+                CreatedAt = designerEntity.CreatedAt,
+                AssignedRequests = await _context.TshirtDesignOrders.CountAsync(dr => dr.Status != "Completed"),
+                CompletedRequests = await _context.TshirtDesignOrders.CountAsync(dr => dr.Status == "Completed"),
+                TotalEarnings = await _context.Payouts
+                    .Where(p => p.PayeeUserId.ToString() == designerEntity.Id && p.Status == "Completed")
+                    .SumAsync(p => (decimal?)p.Amount) ?? 0m
+            };
 
             return Ok(designer);
         }
 
-        [HttpPost]
+
+        [HttpPost("AddDesigner")]
         public async Task<IActionResult> AddDesigner([FromBody] AddDesignerRequest request)
         {
             var existingUser = await _userManager.FindByEmailAsync(request.Email);
@@ -144,6 +149,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             {
                 return BadRequest(result.Errors);
             }
+            if (!await _roleManager.RoleExistsAsync("Designer"))
+                await _roleManager.CreateAsync(new IdentityRole<Guid>("Designer"));
 
             await _userManager.AddToRoleAsync(user, "Designer");
 
@@ -163,9 +170,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         [HttpPut("{id}/Status")]
-        public async Task<IActionResult> UpdateDesignerStatus(string id, [FromBody] UpdateStatusRequest request)
+        public async Task<IActionResult> UpdateDesignerStatus(Guid id, [FromBody] UpdateStatusRequest request)
         {
-            var designer = await _context.TshirtDesigners.FindAsync(id);
+            var designer = await _context.TshirtDesigners.FindAsync(id.ToString());
             if (designer == null)
             {
                 return NotFound();
@@ -178,9 +185,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         [HttpPut("{id}/Suspend")]
-        public async Task<IActionResult> SuspendDesigner(string id)
+        public async Task<IActionResult> SuspendDesigner(Guid id)
         {
-            var designer = await _context.TshirtDesigners.FindAsync(id);
+            var designer = await _context.TshirtDesigners.FindAsync(id.ToString());
             if (designer == null)
             {
                 return NotFound();
@@ -193,9 +200,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         [HttpPut("{id}/Unsuspend")]
-        public async Task<IActionResult> UnsuspendDesigner(string id)
+        public async Task<IActionResult> UnsuspendDesigner(Guid id)
         {
-            var designer = await _context.TshirtDesigners.FindAsync(id);
+            var designer = await _context.TshirtDesigners.FindAsync(id.ToString());
             if (designer == null)
             {
                 return NotFound();
@@ -208,10 +215,10 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteDesigner(string id)
+        public async Task<IActionResult> DeleteDesigner(Guid id)
         {
             var designer = await _context.TshirtDesigners
-                .FirstOrDefaultAsync(d => d.Id == id);
+                .FirstOrDefaultAsync(d => d.Id == id.ToString());
 
             if (designer == null)
             {

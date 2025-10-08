@@ -19,8 +19,6 @@
         public double AverageLikesPerReel { get; set; }
         public decimal TotalEarnings { get; set; }
         public decimal PendingEarnings { get; set; }
-        public DateTime? LastReelDate { get; set; }
-        public DateTime? LastPayoutDate { get; set; }
-        public List<ReelInfoDto> Reels { get; set; }
+       
     }
 }

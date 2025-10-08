@@ -188,7 +188,11 @@ namespace Digital_Mall_API.Controllers.Account
             if (model != null && model.Status != "Approved")
                 return Unauthorized("Your account is not yet approved by admin.");
 
-            
+
+            var designer = await _context.TshirtDesigners.FindAsync(user.Id.ToString());
+            if (model != null && model.Status != "Approved")
+                return Unauthorized("Your account is not yet approved by admin.");
+
             var customer = await _context.Customers.FindAsync(user.Id.ToString());
             if (customer != null && customer.Status != "Active")
                 return Unauthorized("Your account is not active.");
