@@ -168,6 +168,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     Name = dto.Name,
                     Description = dto.Description,
                     Price = dto.Price,
+                    Gender = dto.Gender,
                     IsActive = dto.IsActive,
                     BrandId = brandId,
                     SubCategoryId = dto.SubCategoryId
@@ -252,6 +253,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 product.Description = dto.Description;
                 product.Price = dto.Price;
                 product.IsActive = dto.IsActive;
+                product.Gender = dto.Gender;
                 product.SubCategoryId = dto.SubCategoryId;
 
                 // Remove old variants and add new ones

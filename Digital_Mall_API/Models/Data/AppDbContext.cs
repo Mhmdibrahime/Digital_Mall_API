@@ -51,6 +51,7 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<TShirtStyle> TShirtStyles { get; set; }
         public DbSet<ReelCommission> ReelCommissions { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
+        public DbSet<ProductFeedback> ProductFeedbacks { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
