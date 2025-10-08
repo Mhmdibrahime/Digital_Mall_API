@@ -95,7 +95,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 {
                     Id = b.Id,
                     Name = b.OfficialName,
-                    EffectiveCommissionRate = GetEffectiveCommissionRate(b.SpecificCommissionRate, globalRate),
+                    EffectiveCommissionRate = b.SpecificCommissionRate ?? globalRate,
                     
                     HasCustomRate = b.SpecificCommissionRate != null
                 })
@@ -137,7 +137,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 {
                     Id = m.Id,
                     Name = m.Name,
-                    EffectiveCommissionRate = GetEffectiveCommissionRate(m.SpecificCommissionRate, globalRate),
+                    EffectiveCommissionRate = m.SpecificCommissionRate ?? globalRate,
                    
                     HasCustomRate = m.SpecificCommissionRate != null
                 })
@@ -156,14 +156,14 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
        
         [HttpPut("UpdateBrandCommission/{id}")]
-        public async Task<IActionResult> UpdateBrandCommission(string id, [FromBody] UpdateSpecificCommissionRequest request)
+        public async Task<IActionResult> UpdateBrandCommission(Guid id, [FromBody] UpdateSpecificCommissionRequest request)
         {
             if (request.CommissionRate < 0 || request.CommissionRate > 100)
             {
                 return BadRequest("Commission rate must be between 0 and 100");
             }
 
-            var brand = await _context.Brands.FindAsync(id);
+            var brand = await _context.Brands.FindAsync(id.ToString());
             if (brand == null)
             {
                 return NotFound();
@@ -180,14 +180,14 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         [HttpPut("UpdateModelCommission/{id}")]
-        public async Task<IActionResult> UpdateModelCommission(string id, [FromBody] UpdateSpecificCommissionRequest request)
+        public async Task<IActionResult> UpdateModelCommission(Guid id, [FromBody] UpdateSpecificCommissionRequest request)
         {
             if (request.CommissionRate < 0 || request.CommissionRate > 100)
             {
                 return BadRequest("Commission rate must be between 0 and 100");
             }
 
-            var model = await _context.FashionModels.FindAsync(id);
+            var model = await _context.FashionModels.FindAsync(id.ToString());
             if (model == null)
             {
                 return NotFound();
