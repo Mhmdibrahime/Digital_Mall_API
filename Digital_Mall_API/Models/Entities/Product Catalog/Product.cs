@@ -40,5 +40,7 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         public virtual List<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
         public virtual List<ProductImage> Images { get; set; } = new List<ProductImage>();
         public virtual List<ReelProduct> ReelProducts { get; set; } = new List<ReelProduct>();
+        public ICollection<Favorite>? Favorites { get; set; }
     }
+
 }

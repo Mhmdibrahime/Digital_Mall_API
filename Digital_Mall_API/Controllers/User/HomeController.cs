@@ -93,9 +93,9 @@ namespace Digital_Mall_API.Controllers.User
             return Ok(products);
         }
         [HttpGet("top-selling")]
-        public async Task<IActionResult> GetTopSellingProducts()
+        public IActionResult GetTopSellingProducts()
         {
-            var topSellingProducts = await context.OrderItems
+            var topSellingProducts = context.OrderItems
                 .Include(oi => oi.ProductVariant)
                     .ThenInclude(v => v.Product)
                         .ThenInclude(p => p.Brand)
@@ -105,6 +105,7 @@ namespace Digital_Mall_API.Controllers.User
                 .Where(oi => oi.ProductVariant != null &&
                              oi.ProductVariant.Product != null &&
                              oi.ProductVariant.Product.IsActive)
+                .AsEnumerable() 
                 .GroupBy(oi => oi.ProductVariant.Product)
                 .Select(g => new
                 {
@@ -117,21 +118,22 @@ namespace Digital_Mall_API.Controllers.User
                 {
                     Id = x.Product.Id,
                     Name = x.Product.Name,
-                    BrandName = x.Product.Brand != null ? x.Product.Brand.OfficialName : null,
-                    ImageUrl = x.Product.Images.FirstOrDefault() != null ? x.Product.Images.FirstOrDefault().ImageUrl : null,
+                    BrandName = x.Product.Brand?.OfficialName,
+                    ImageUrl = x.Product.Images.FirstOrDefault()?.ImageUrl, 
                     OriginalPrice = x.Product.Price,
-                    DiscountValue = x.Product.ProductDiscount != null ? x.Product.ProductDiscount.DiscountValue : 0,
+                    DiscountValue = x.Product.ProductDiscount?.DiscountValue ?? 0,
                     DiscountedPrice = x.Product.ProductDiscount != null
                         ? x.Product.Price - (x.Product.Price * x.Product.ProductDiscount.DiscountValue / 100)
                         : x.Product.Price,
-                    DiscountStatus = x.Product.ProductDiscount != null ? x.Product.ProductDiscount.Status : "None",
+                    DiscountStatus = x.Product.ProductDiscount?.Status ?? "None",
                     CreatedAt = x.Product.CreatedAt,
                     StockQuantity = x.Product.Variants.Sum(v => v.StockQuantity)
                 })
-                .ToListAsync();
+                .ToList();
 
             return Ok(topSellingProducts);
         }
+
         [HttpGet("trending")]
         public async Task<IActionResult> GetTrendingProducts()
         {

@@ -45,6 +45,7 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<TShirtSize> TShirtSizes { get; set; }
         public DbSet<TShirtStyle> TShirtStyles { get; set; }
         public DbSet<ReelCommission> ReelCommissions { get; set; }
+        public DbSet<Favorite> Favorites { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -156,6 +157,18 @@ namespace Digital_Mall_API.Models.Data
                 .HasMany(c => c.SubCategories)
                 .WithOne(sc => sc.Category)
                 .HasForeignKey(sc => sc.CategoryId);
+
+            modelBuilder.Entity<Favorite>()
+       .HasOne(f => f.User)
+       .WithMany(u => u.Favorites)
+       .HasForeignKey(f => f.UserId)
+       .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Favorite>()
+                .HasOne(f => f.Product)
+                .WithMany(p => p.Favorites)
+                .HasForeignKey(f => f.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

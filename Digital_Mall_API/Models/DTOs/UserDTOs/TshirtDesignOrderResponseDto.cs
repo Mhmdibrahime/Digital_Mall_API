@@ -1,22 +1,15 @@
-﻿using Digital_Mall_API.Models.DTOs.UserDTOs;
-
-namespace Digital_Mall_API.Models.DTOs.DesignerAdminDTOs
+﻿namespace Digital_Mall_API.Models.DTOs.UserDTOs
 {
-    public class TshirtDesignOrderDto
+    public class TshirtDesignOrderResponseDto
     {
         public int Id { get; set; }
-
-        public string CustomerName { get; set; }
-        public string CustomerEmail { get; set; }
-
+        public string CustomerUserId { get; set; }
         public string ChosenColor { get; set; }
         public string ChosenStyle { get; set; }
         public string ChosenSize { get; set; }
-
         public string TshirtType { get; set; }
         public decimal Length { get; set; }
         public decimal Weight { get; set; }
-
         public string CustomerDescription { get; set; }
 
         // صور التيشيرت 4 حقول ثابتة
@@ -28,20 +21,14 @@ namespace Digital_Mall_API.Models.DTOs.DesignerAdminDTOs
         // صور الديزاين كقائمة
         public List<string> CustomerImageUrls { get; set; } = new List<string>();
 
-        // قائمة النصوص مع إعداداتها
-        public List<AddOrderTextDto> Texts { get; set; } = new List<AddOrderTextDto>();
-
         public string FinalDesignUrl { get; set; }
         public string DesignerNotes { get; set; }
-
         public string Status { get; set; }
         public decimal FinalPrice { get; set; }
-        public DateTime? EstimatedDeliveryDate { get; set; }
         public bool IsPaid { get; set; }
         public DateTime RequestDate { get; set; }
+
+        public List<AddOrderTextDto> Texts { get; set; } = new List<AddOrderTextDto>();
     }
-
-
-
 
 }
