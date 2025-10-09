@@ -28,11 +28,19 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpGet("All")]
         public async Task<ActionResult> GetAll([FromQuery] ProductQueryParameters parameters)
         {
+            var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(brandId))
+                return Unauthorized("Brand not authorized");
+            var brand = await _context.Brands.FindAsync(brandId);
+            if(brand == null)
+                return NotFound("Brand not found"); 
             var query = _context.Products
+                .Where(p => p.BrandId == brandId)
                 .Include(p => p.SubCategory).ThenInclude(sc => sc.Category)
                 .Include(p => p.Brand)
                 .Include(p => p.Variants)
                 .Include(p => p.Images)
+                
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(parameters.Search))

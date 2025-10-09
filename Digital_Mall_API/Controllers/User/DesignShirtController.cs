@@ -23,7 +23,7 @@ namespace Digital_Mall_API.Controllers.User
             this.context = context;
             _userManager = userManager;
         }
-        [HttpGet]
+        [HttpGet("GetTemplates")]
         public IActionResult GetAll()
         {
             var templates = context.TshirtTemplates
@@ -42,7 +42,7 @@ namespace Digital_Mall_API.Controllers.User
             return Ok(templates);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("GetTemplate/{id}")]
         public IActionResult GetById(int id)
         {
             var template = context.TshirtTemplates

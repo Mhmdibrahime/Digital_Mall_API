@@ -646,29 +646,41 @@ namespace Digital_Mall_API.Controllers
                     return NotFound("Customer not found");
                 }
 
+                // More optimized query with selective includes
                 var orders = await _context.Orders
                     .Where(o => o.CustomerId == customer.Id)
                     .Include(o => o.OrderItems)
                         .ThenInclude(oi => oi.ProductVariant)
-                        .ThenInclude(pv => pv.Product)
+                            .ThenInclude(pv => pv.Product)
+                                .ThenInclude(p => p.Images.Take(1)) // Only include first image
                     .Include(o => o.OrderItems)
                         .ThenInclude(oi => oi.Brand)
-                    .Include(o => o.OrderItems)
-                        .ThenInclude(oi => oi.Order)
                     .OrderByDescending(o => o.OrderDate)
+                    .AsSplitQuery() // Prevents Cartesian explosion
                     .ToListAsync();
 
                 var refundRequests = await _context.RefundRequests
                     .Where(r => r.CustomerId == customer.Id)
                     .ToListAsync();
 
-                var orderDtos = new List<UserOrderDto>();
-
-                foreach (var order in orders)
+                var orderDtos = orders.Select(order =>
                 {
-                    var shippingAddress = $"{order.ShippingAddress_Building}, {order.ShippingAddress_Street}, {order.ShippingAddress_City}, {order.ShippingAddress_Country}";
+                    var orderRefundRequests = refundRequests
+                        .Where(r => r.OrderId == order.Id)
+                        .ToList();
 
-                    var orderDto = new UserOrderDto
+                    var hasRefundRequest = orderRefundRequests.Any();
+
+                    // Simple approach: Use the status of the most recent refund request
+                    string orderRefundStatus = null;
+                    if (hasRefundRequest)
+                    {
+                        orderRefundStatus = orderRefundRequests
+                            .OrderByDescending(r => r.RequestDate)
+                            .FirstOrDefault()?.Status;
+                    }
+
+                    return new UserOrderDto
                     {
                         OrderId = order.Id,
                         OrderNumber = $"ORD-{order.Id:D3}",
@@ -677,47 +689,24 @@ namespace Digital_Mall_API.Controllers
                         PaymentStatus = order.PaymentStatus,
                         TotalAmount = order.TotalAmount,
                         ItemCount = order.OrderItems?.Count ?? 0,
-                        ShippingAddress = shippingAddress,
-                        OrderItems = new List<OrderItemDto>()
-                    };
-
-                    if (order.OrderItems != null)
-                    {
-                        foreach (var item in order.OrderItems)
+                        ShippingAddress = $"{order.ShippingAddress_Building}, {order.ShippingAddress_Street}, {order.ShippingAddress_City}, {order.ShippingAddress_Country}",
+                        OrderItems = order.OrderItems?.Select(item => new OrderItemDto
                         {
-                            var productVariant = item.ProductVariant;
-                            var product = productVariant?.Product;
-                            var brand = item.Brand;
-
-                            var itemDto = new OrderItemDto
-                            {
-                                OrderItemId = item.Id,
-                                ProductName = product?.Name ?? "Unknown Product",
-                                BrandName = brand?.OfficialName ?? "Unknown Brand",
-                                VariantInfo = $"{productVariant?.Size} - {productVariant?.Color}",
-                                Quantity = item.Quantity,
-                                Price = item.PriceAtTimeOfPurchase,
-                                TotalPrice = item.PriceAtTimeOfPurchase * item.Quantity,
-                                ImageUrl = product?.Images.FirstOrDefault()?.ImageUrl 
-                            };
-
-                            var refundRequest = refundRequests.FirstOrDefault(r =>
-                                r.OrderItemId == item.Id && r.OrderId == order.Id);
-
-                            if (refundRequest != null)
-                            {
-                                itemDto.HasRefundRequest = true;
-                                itemDto.RefundStatus = refundRequest.Status;
-                                orderDto.HasRefundRequest = true;
-                                orderDto.RefundStatus = refundRequest.Status;
-                            }
-
-                            orderDto.OrderItems.Add(itemDto);
-                        }
-                    }
-
-                    orderDtos.Add(orderDto);
-                }
+                            OrderItemId = item.Id,
+                            ProductName = item.ProductVariant?.Product?.Name ?? "Unknown Product",
+                            BrandName = item.Brand?.OfficialName ?? "Unknown Brand",
+                            VariantInfo = $"{item.ProductVariant?.Size} - {item.ProductVariant?.Color}",
+                            Quantity = item.Quantity,
+                            Price = item.PriceAtTimeOfPurchase,
+                            TotalPrice = item.PriceAtTimeOfPurchase * item.Quantity,
+                            ImageUrl = item.ProductVariant?.Product?.Images.FirstOrDefault()?.ImageUrl,
+                            HasRefundRequest = refundRequests.Any(r => r.OrderItemId == item.Id && r.OrderId == order.Id),
+                            RefundStatus = refundRequests.FirstOrDefault(r => r.OrderItemId == item.Id && r.OrderId == order.Id)?.Status
+                        }).ToList() ?? new List<OrderItemDto>(),
+                        HasRefundRequest = hasRefundRequest,
+                        RefundStatus = orderRefundStatus
+                    };
+                }).ToList();
 
                 var response = new OrderHistoryResponse
                 {
@@ -831,6 +820,11 @@ namespace Digital_Mall_API.Controllers
         [HttpPost("CreateRefundRequest")]
         public async Task<ActionResult> CreateRefundRequest([FromForm] CreateRefundRequestDto requestDto)
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized("User not authorized");
+            }
             try
             {
                 var orderItem = await _context.OrderItems

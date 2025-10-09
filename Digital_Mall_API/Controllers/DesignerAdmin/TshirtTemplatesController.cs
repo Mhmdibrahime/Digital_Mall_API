@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Digital_Mall_API.Controllers.DesignerAdmin
 {
-    [Route("api/[controller]")]
+    [Route("Designer/[controller]")]
     [ApiController]
     public class TshirtTemplatesController : ControllerBase
     {
