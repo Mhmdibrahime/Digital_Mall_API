@@ -72,7 +72,7 @@ namespace Digital_Mall_API.Controllers
         {
             var reel = await _context.Reels
                 .Include(r => r.PostedByBrand)
-                .Include(r => r.PostedByFashionModel)
+                .Include(r => r.PostedByModel)
                 .Include(r => r.LinkedProducts)
                 .FirstOrDefaultAsync(r => r.Id == reelId);
 

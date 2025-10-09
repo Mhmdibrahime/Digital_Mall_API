@@ -4,8 +4,7 @@ namespace Digital_Mall_API.Models.DTOs.BrandAdminDTOs.BrandPayoutsDTOs
 {
     public class CreatePayoutDto
     {
-        [Required]
-        public Guid PayeeUserId { get; set; }
+        
 
         [Required]
         [Range(0.01, double.MaxValue)]

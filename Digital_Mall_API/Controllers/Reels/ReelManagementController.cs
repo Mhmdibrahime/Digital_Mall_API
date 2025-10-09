@@ -42,28 +42,28 @@ namespace Digital_Mall_API.Controllers.Reels
                 if (user == null)
                     return Unauthorized(new { error = "User not authenticated" });
 
-                string userType;
-                object userEntity;
-
                 var userRoles = await _userManager.GetRolesAsync(user);
+                string? userType = null;
+                string? brandId = null;
+                string? fashionModelId = null;
 
                 if (userRoles.Contains("FashionModel"))
                 {
-                    var fashionModel = await _context.FashionModels.FindAsync(user.Id);
+                    var fashionModel = await _context.FashionModels.FindAsync(user.Id.ToString());
                     if (fashionModel == null)
                         return BadRequest(new { error = "Fashion model profile not found" });
 
                     userType = "FashionModel";
-                    userEntity = fashionModel;
+                    fashionModelId = fashionModel.Id;
                 }
                 else if (userRoles.Contains("Brand"))
                 {
-                    var brand = await _context.Brands.FindAsync(user.Id);
+                    var brand = await _context.Brands.FindAsync(user.Id.ToString());
                     if (brand == null)
                         return BadRequest(new { error = "Brand profile not found" });
 
                     userType = "Brand";
-                    userEntity = brand;
+                    brandId = brand.Id;
                 }
                 else
                 {
@@ -74,6 +74,8 @@ namespace Digital_Mall_API.Controllers.Reels
                 {
                     PostedByUserId = user.Id.ToString(),
                     PostedByUserType = userType,
+                    PostedByBrandId = brandId,
+                    PostedByModelId = fashionModelId,
                     Caption = request.Caption,
                     DurationInSeconds = request.DurationInSeconds,
                     UploadStatus = "draft",
@@ -108,6 +110,7 @@ namespace Digital_Mall_API.Controllers.Reels
                             ProductId = productId
                         });
                     }
+
                     await _context.SaveChangesAsync();
                 }
 
@@ -135,6 +138,7 @@ namespace Digital_Mall_API.Controllers.Reels
                 return StatusCode(500, new { error = "Failed to prepare upload" });
             }
         }
+
         [HttpGet("products/search")]
         [Authorize]
         public async Task<ActionResult<List<ProductSearchDto>>> SearchProducts(
@@ -242,7 +246,7 @@ namespace Digital_Mall_API.Controllers.Reels
             if (pageSize < 1 || pageSize > 100) pageSize = 20;
 
             var query = _context.Reels
-                .Include(r => r.PostedByFashionModel)
+                .Include(r => r.PostedByModel)
                 .Include(r => r.PostedByBrand)
                 .Include(r => r.LinkedProducts)
                     .ThenInclude(rp => rp.Product)
@@ -253,7 +257,7 @@ namespace Digital_Mall_API.Controllers.Reels
                 query = query.Where(r =>
                     r.Caption.Contains(search) ||
                     r.Caption.Contains($"#{search}") ||
-                    r.PostedByFashionModel.Name.Contains(search) ||
+                    r.PostedByModel.Name.Contains(search) ||
                     r.PostedByBrand.OfficialName.Contains(search) ||
                     r.LinkedProducts.Any(rp => rp.Product.Name.Contains(search))
                 );
@@ -275,7 +279,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     UploadStatus = r.UploadStatus,
                     PostedByUserType = r.PostedByUserType,
                     PostedByName = r.PostedByUserType == "FashionModel"
-                        ? r.PostedByFashionModel.Name
+                        ? r.PostedByModel.Name
                         : r.PostedByBrand.OfficialName,
                     LinkedProductsCount = r.LinkedProducts.Count,
                     LikesCount = r.LikesCount,
@@ -308,7 +312,7 @@ namespace Digital_Mall_API.Controllers.Reels
             var reel = await _context.Reels
                 .Include(r => r.LinkedProducts)
                     .ThenInclude(rp => rp.Product)
-                .Include(r => r.PostedByFashionModel)
+                .Include(r => r.PostedByModel)
                 .Include(r => r.PostedByBrand)
                 .FirstOrDefaultAsync(r => r.Id == reelId);
 
@@ -336,7 +340,7 @@ namespace Digital_Mall_API.Controllers.Reels
                 UploadStatus = reel.UploadStatus,
                 PostedByUserType = reel.PostedByUserType,
                 PostedByName = reel.PostedByUserType == "FashionModel"
-                    ? reel.PostedByFashionModel.Name
+                    ? reel.PostedByModel.Name
                     : reel.PostedByBrand.OfficialName,
                 LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDetailDto
                 {

@@ -219,41 +219,48 @@ namespace Digital_Mall_API.Controllers.Model
 
         private async Task<FinancialStatisticsDto> GetFinancialStatistics(string modelId)
         {
+
+            // Commission calculations for total only
             var commissions = await _context.ReelCommissions
                 .Where(rc => rc.FashionModelId == modelId)
                 .ToListAsync();
 
             var totalCommissions = commissions.Sum(rc => rc.CommissionAmount);
-            var pendingCommissions = commissions.Where(rc => rc.Status == "Pending").Sum(rc => rc.CommissionAmount);
-            var paidCommissions = commissions.Where(rc => rc.Status == "Paid").Sum(rc => rc.CommissionAmount);
 
-            var totalCommissionsCount = commissions.Count;
-            var pendingCommissionsCount = commissions.Count(rc => rc.Status == "Pending");
-            var paidCommissionsCount = commissions.Count(rc => rc.Status == "Paid");
+            // Payout-based calculations
+            var payouts = await _context.Payouts
+                .Where(p => p.PayeeUserId.ToString() == modelId)
+                .ToListAsync();
+
+
+            // NEW LOGIC: PaidCommissions = Sum of paid payouts
+            var paidCommissions = payouts
+                .Where(p => p.Status == "Paid")
+                .Sum(p => p.Amount);
+
+            var pendingCommissions =totalCommissions - paidCommissions;
+
+
+
 
             return new FinancialStatisticsDto
             {
                 TotalCommissions = new CommissionStat
                 {
                     Amount = totalCommissions,
-                    Count = totalCommissionsCount,
-                    Description = $"You have {totalCommissionsCount} total commissions"
+                    
                 },
                 PendingCommissions = new CommissionStat
                 {
-                    Amount = pendingCommissions,
-                    Count = pendingCommissionsCount,
-                    Description = $"{pendingCommissionsCount} of them pending"
+                    Amount = pendingCommissions ,
                 },
                 PaidCommissions = new CommissionStat
                 {
                     Amount = paidCommissions,
-                    Count = paidCommissionsCount,
-                    Description = $"{paidCommissionsCount} of them paid"
+                   
                 }
             };
         }
-
         private string GetMonthName(int month)
         {
             return month switch

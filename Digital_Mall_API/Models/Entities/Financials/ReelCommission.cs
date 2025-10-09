@@ -45,9 +45,7 @@ namespace Digital_Mall_API.Models.Entities.Financials
         [Column(TypeName = "decimal(18,2)")]
         public decimal CommissionAmount { get; set; }
 
-        [Required]
-        [StringLength(20)]
-        public string Status { get; set; } = "Pending";
+        
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? PaidAt { get; set; }

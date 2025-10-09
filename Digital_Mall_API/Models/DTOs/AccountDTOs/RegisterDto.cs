@@ -64,6 +64,7 @@ namespace Academic.Models.Dto
 
         public bool Online { get; set; }
         public bool Ofline { get; set; }
+        public string? Location { get; set; }
 
         [Required]
         public IFormFile EvidenceOfProof { get; set; }

@@ -40,41 +40,43 @@ namespace Digital_Mall_API.Controllers.Model
                 return Unauthorized("Model not authenticated.");
             }
 
-            var totalCommissions = await _context.ReelCommissions
-                .Where(rc => rc.FashionModelId == modelId)
-                .SumAsync(rc => rc.CommissionAmount);
-
-            var paidCommissions = await _context.ReelCommissions
-                .Where(rc => rc.FashionModelId == modelId && rc.Status == "Paid")
-                .SumAsync(rc => rc.CommissionAmount);
-
-            var pendingCommissions = await _context.ReelCommissions
-                .Where(rc => rc.FashionModelId == modelId && rc.Status == "Pending")
-                .SumAsync(rc => rc.CommissionAmount);
-
             var modelUserId = await GetModelUserIdAsync(modelId);
-            var totalPaidOut = modelUserId.HasValue
-                ? await _context.Payouts
-                    .Where(p => p.PayeeUserId == modelUserId.Value && p.Status == "Completed")
-                    .SumAsync(p => p.Amount)
-                : 0;
+            if (!modelUserId.HasValue)
+            {
+                return NotFound("Model user not found.");
+            }
 
-            var pendingPayments = modelUserId.HasValue
-                ? await _context.Payouts
-                    .Where(p => p.PayeeUserId == modelUserId.Value && (p.Status == "Approved" || p.Status == "Pending"))
-                    .SumAsync(p => p.Amount)
-                : 0;
+            var totalCommissions = await _context.ReelCommissions
+                .Where(rc => rc.FashionModelId == modelId )
+                .SumAsync(rc => rc.CommissionAmount);
 
-            var availableForPayout = Math.Max(0, paidCommissions - totalPaidOut);
+            // Calculate total paid out (completed payouts)
+            var totalPaidOut = await _context.Payouts
+                .Where(p => p.PayeeUserId == modelUserId.Value && p.Status == "Paid")
+                .SumAsync(p => p.Amount);
+
+            // Calculate pending payouts (pending + approved statuses)
+            var pendingPayments = await _context.Payouts
+                .Where(p => p.PayeeUserId == modelUserId.Value &&
+                           (p.Status == "Pending" || p.Status == "Approved"))
+                .SumAsync(p => p.Amount);
+
+            // Calculate pending commissions (not yet processed)
+            var pendingCommissions = await _context.ReelCommissions
+                .Where(rc => rc.FashionModelId == modelId )
+                .SumAsync(rc => rc.CommissionAmount);
+
+            // Available balance = Total processed commissions - (Paid out + Pending payouts)
+            var availableForPayout = Math.Max(0, totalCommissions - (totalPaidOut + pendingPayments));
 
             return new ModelEarningsDto
             {
-                TotalCommissions = totalCommissions,
-                PaidCommissions = paidCommissions,
-                PendingCommissions = pendingCommissions,
-                TotalPaidOut = totalPaidOut,
-                PendingPayments = pendingPayments,
-                AvailableForPayout = availableForPayout
+                TotalCommissions = totalCommissions + pendingCommissions, // All commissions ever
+                PaidCommissions = totalCommissions, // Only processed commissions
+                PendingCommissions = pendingCommissions, // Commissions waiting to be processed
+                TotalPaidOut = totalPaidOut, // Successfully paid out amounts
+                PendingPayments = pendingPayments, // Payouts in progress
+                AvailableForPayout = availableForPayout // What can be withdrawn now
             };
         }
 
@@ -194,10 +196,30 @@ namespace Digital_Mall_API.Controllers.Model
                 return NotFound("Model user not found.");
             }
 
-            var earnings = await GetModelEarnings();
-            if (createPayoutDto.Amount > earnings.Value.AvailableForPayout)
+            // Recalculate available balance in real-time
+            var totalCommissions = await _context.ReelCommissions
+                .Where(rc => rc.FashionModelId == modelId )
+                .SumAsync(rc => rc.CommissionAmount);
+
+            var totalPaidOut = await _context.Payouts
+                .Where(p => p.PayeeUserId == modelUserId.Value && p.Status == "Paid")
+                .SumAsync(p => p.Amount);
+
+            var pendingPayments = await _context.Payouts
+                .Where(p => p.PayeeUserId == modelUserId.Value &&
+                           (p.Status == "Pending" || p.Status == "Approved"))
+                .SumAsync(p => p.Amount);
+
+            var availableForPayout = Math.Max(0, totalCommissions - (totalPaidOut + pendingPayments));
+
+            if (createPayoutDto.Amount > availableForPayout)
             {
-                return BadRequest($"Insufficient funds. Available for payout: {earnings.Value.AvailableForPayout:C}");
+                return BadRequest($"Insufficient funds. Available for payout: {availableForPayout:C}");
+            }
+
+            if (createPayoutDto.Amount <= 0)
+            {
+                return BadRequest("Payout amount must be greater than zero.");
             }
 
             var lastPayout = await _context.Payouts
@@ -236,11 +258,31 @@ namespace Digital_Mall_API.Controllers.Model
                 return Unauthorized("Model not authenticated.");
             }
 
-            var earnings = await GetModelEarnings();
-            return Ok(earnings.Value.AvailableForPayout);
+            var modelUserId = await GetModelUserIdAsync(modelId);
+            if (!modelUserId.HasValue)
+            {
+                return NotFound("Model user not found.");
+            }
+
+            var totalCommissions = await _context.ReelCommissions
+                .Where(rc => rc.FashionModelId == modelId)
+                .SumAsync(rc => rc.CommissionAmount);
+
+            var totalPaidOut = await _context.Payouts
+                .Where(p => p.PayeeUserId == modelUserId.Value && p.Status == "Paid")
+                .SumAsync(p => p.Amount);
+
+            var pendingPayments = await _context.Payouts
+                .Where(p => p.PayeeUserId == modelUserId.Value &&
+                           (p.Status == "Pending" || p.Status == "Approved"))
+                .SumAsync(p => p.Amount);
+
+            var availableForPayout = Math.Max(0, totalCommissions - (totalPaidOut + pendingPayments));
+
+            return Ok(availableForPayout);
         }
 
-       
+
         private bool PayoutExists(int id)
         {
             return _context.Payouts.Any(e => e.Id == id);

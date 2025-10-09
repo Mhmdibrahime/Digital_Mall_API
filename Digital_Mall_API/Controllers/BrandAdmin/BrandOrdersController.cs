@@ -156,6 +156,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     BrandName = oi.Brand.OfficialName,
                     ProductName = oi.ProductVariant.Product.Name,
                     Quantity = oi.Quantity,
+                    Size = oi.ProductVariant.Size,
+                    Color = oi.ProductVariant.Color,
                     Price = oi.PriceAtTimeOfPurchase,
                     Total = oi.Quantity * oi.PriceAtTimeOfPurchase
                 }).ToList(),

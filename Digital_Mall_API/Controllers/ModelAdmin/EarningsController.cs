@@ -27,14 +27,18 @@ namespace Digital_Mall_API.Controllers.ModelAdmin
             var query = _context.ReelCommissions
                 .Where(rc => rc.FashionModelId == modelId)
                 .AsQueryable();
+            var payouts = _context.Payouts
+                .Where(p => p.PayeeUserId.ToString() == modelId )
+                .AsQueryable();
 
-            
+
 
             var commissions = await query.ToListAsync();
 
             var totalCommissions = commissions.Sum(rc => rc.CommissionAmount);
-            var pendingAmounts = commissions.Where(rc => rc.Status == "Pending").Sum(rc => rc.CommissionAmount);
-            var paidAmounts = commissions.Where(rc => rc.Status == "Paid").Sum(rc => rc.CommissionAmount);
+            var paidAmounts = payouts.Where(payouts => payouts.Status == "Paid").Sum(payouts => payouts.Amount);
+            var pendingAmounts = totalCommissions - paidAmounts;
+            
 
             return Ok(new
             {
@@ -83,7 +87,6 @@ namespace Digital_Mall_API.Controllers.ModelAdmin
                     Amount = Math.Round(rc.CommissionAmount, 2) + " LE",
                     ProductName = rc.Product.Name,
                     BrandName = rc.Brand.OfficialName,
-                    Status = rc.Status
                 })
                 .ToListAsync();
 

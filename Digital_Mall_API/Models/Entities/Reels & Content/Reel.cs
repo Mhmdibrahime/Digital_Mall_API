@@ -12,9 +12,9 @@ namespace Digital_Mall_API.Models.Entities.Reels___Content
 
         [Required]
         public string PostedByUserId { get; set; }
-        [Required]
+
         [StringLength(20)]
-        public string PostedByUserType { get; set; } 
+        public string? PostedByUserType { get; set; }
 
         [Required]
         [StringLength(500)]
@@ -34,12 +34,7 @@ namespace Digital_Mall_API.Models.Entities.Reels___Content
         [Range(1, 300)]
         public int DurationInSeconds { get; set; }
 
-        [Required]
-        [Range(0, int.MaxValue)]
         public int LikesCount { get; set; } = 0;
-
-        [Required]
-        [Range(0, int.MaxValue)]
         public int SharesCount { get; set; } = 0;
 
         [StringLength(100)]
@@ -51,17 +46,19 @@ namespace Digital_Mall_API.Models.Entities.Reels___Content
         [StringLength(100)]
         public string? MuxPlaybackId { get; set; }
 
-        [Required]
         [StringLength(50)]
         public string UploadStatus { get; set; } = "draft";
-
         public string? UploadError { get; set; }
 
         [JsonIgnore]
         public string? TemporaryUploadUrl { get; set; }
 
-        public virtual FashionModel? PostedByFashionModel { get; set; }
+        public string? PostedByBrandId { get; set; }
+        public string? PostedByModelId { get; set; }
+
         public virtual Brand? PostedByBrand { get; set; }
+        public virtual FashionModel? PostedByModel { get; set; }
+
         public virtual List<ReelProduct>? LinkedProducts { get; set; } = new List<ReelProduct>();
     }
 }

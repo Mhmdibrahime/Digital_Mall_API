@@ -88,7 +88,64 @@ namespace Digital_Mall_API.Controllers.User
 
             return Ok(productDetails);
         }
+        [HttpGet("brand-details/{productId}")]
+        public async Task<IActionResult> GetBrandDetailsByProduct(int productId)
+        {
+            var product = await _context.Products
+                .Include(p => p.Brand)
+                .FirstOrDefaultAsync(p => p.Id == productId);
 
+            if (product == null || product.Brand == null)
+                return NotFound(new { message = "Product or Brand not found" });
+
+            var brand = product.Brand;
+
+            var followersCount = await _context.FollowingBrands
+                .CountAsync(f => f.BrandId == brand.Id);
+
+            var productsCount = await _context.Products
+                .CountAsync(p => p.BrandId == brand.Id && p.IsActive);
+
+          
+
+            
+            var features = new List<string>
+    {
+        "Premium Quality",
+        "Fast Shipping",
+        "30-Day Returns",
+        "Customer Support"
+    };
+
+            var brandDetails = new
+            {
+                BrandId = brand.Id,
+                BrandName = brand.OfficialName,
+                FollowersCount = followersCount,
+                FollowersFormatted = FormatCount(followersCount),
+                ProductsCount = productsCount,
+                Location = brand.Location,
+                Description = brand.Description,
+                LogoUrl = brand.LogoUrl,
+                Features = features,
+                SocialMedia = new
+                {
+                    Facebook = brand.Facebook,
+                    Instagram = brand.Instgram
+                }
+            };
+
+            return Ok(brandDetails);
+        }
+
+        private string FormatCount(int count)
+        {
+            if (count >= 1000000)
+                return $"{(count / 1000000.0):0.0}M";
+            if (count >= 1000)
+                return $"{(count / 1000.0):0.0}K";
+            return count.ToString();
+        }
         [HttpPost("product-feedback")]
         public async Task<IActionResult> AddFeedback([FromBody] AddProductFeedbackDto dto)
         {

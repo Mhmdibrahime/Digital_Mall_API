@@ -121,6 +121,7 @@ namespace Digital_Mall_API.Controllers.Account
                 Instgram = dto.Instgram,
                 Online = dto.Online,
                 Ofline = dto.Ofline,
+                Location = dto.Location,
                 Password = dto.Password, 
                 EvidenceOfProofUrl = await _fileService.SaveFileAsync(dto.EvidenceOfProof, "BrandProofs"),
                 Status = "Pending",

@@ -22,12 +22,14 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
 
         public bool Online { get; set; }
         public bool Ofline { get; set; }
-      
+
+        [StringLength(500)]
+        public string? Location { get; set; }      
         [StringLength(1000)]
 
         public string? Description { get; set; }
 
-      
+        
         [Url]
         [StringLength(500)]
         public string? LogoUrl { get; set; }

@@ -47,12 +47,32 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
          oi.Order.PaymentStatus == "Paid")
      .SumAsync(oi => oi.Quantity * oi.PriceAtTimeOfPurchase);
 
+            var brandOrderItems = await _context.OrderItems
+                .Include(oi => oi.Order)
+                .Where(oi =>
+                    oi.BrandId == brandId &&
+                    oi.Order.Status == "Deliverd" &&
+                    oi.Order.PaymentStatus == "Paid")
+                .ToListAsync();
+
+            if (!brandOrderItems.Any())
+                return BadRequest("Brand hs no orders yet");
 
 
-            var platformCommissionDeductions = await CalculateBrandCommissionDeductions(brandId);
+            var brand = await _context.Brands.FindAsync(brandId);
+            var globalCommissionRate = await _context.GlobalCommission
+                .Select(g => g.CommissionRate)
+                .FirstOrDefaultAsync();
+
+            var commissionRate = brand?.SpecificCommissionRate ?? globalCommissionRate;
+
+
+            var platformCommissionDeductions = brandOrderItems
+                .Sum(oi => oi.PriceAtTimeOfPurchase * oi.Quantity * (commissionRate / 100));
+
 
             var modelCommissionDeductions = await _context.ReelCommissions
-                .Where(rc => rc.BrandId == brandId && rc.Status == "Paid")
+                .Where(rc => rc.BrandId == brandId)
                 .SumAsync(rc => rc.CommissionAmount);
 
             var brandUserId = await GetBrandUserIdAsync(brandId);
@@ -60,7 +80,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             
             var totalPaidOut = brandUserId.HasValue
                 ? await _context.Payouts
-                    .Where(p => p.PayeeUserId == brandUserId.Value && p.Status == "Completed")
+                    .Where(p => p.PayeeUserId == brandUserId.Value && p.Status == "Paid")
                     .SumAsync(p => p.Amount)
                 : 0;
 
@@ -72,22 +92,20 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     .SumAsync(p => p.Amount)
                 : 0;
 
-            var pendingModelCommissions = await _context.ReelCommissions
-                .Where(rc => rc.BrandId == brandId && rc.Status == "Pending")
-                .SumAsync(rc => rc.CommissionAmount);
+            
 
-            var totalDeductions = platformCommissionDeductions + modelCommissionDeductions + pendingModelCommissions;
+            var totalDeductions = platformCommissionDeductions + modelCommissionDeductions;
             var netEarnings = totalRevenue - totalDeductions;
-            var availableForPayout = Math.Max(0, netEarnings - totalPaidOut);
+            var availableForPayout = Math.Max(0, netEarnings - (totalPaidOut+pendingPayments));
 
            
             return new FinancialEarningsDto
             {
                 TotalRevenue = totalRevenue,
                 PendingPayments = pendingPayments,
+                CompletedPayments = totalPaidOut,
                 PlatformCommissionDeductions = platformCommissionDeductions,
                 ModelCommissionDeductions = modelCommissionDeductions,
-                PendingModelCommissions = pendingModelCommissions,
                 TotalDeductions = totalDeductions,
                 NetEarnings = netEarnings,
                 AvailableForPayout = availableForPayout

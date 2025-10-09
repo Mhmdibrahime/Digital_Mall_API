@@ -37,7 +37,7 @@ namespace Digital_Mall_API.Controllers.Reels
 
                 var baseQuery = _context.Reels
                     .Where(r => r.UploadStatus == "ready")
-                    .Include(r => r.PostedByFashionModel)
+                    .Include(r => r.PostedByModel)
                     .Include(r => r.PostedByBrand)
                     .Include(r => r.LinkedProducts)
                         .ThenInclude(rp => rp.Product)
@@ -64,10 +64,10 @@ namespace Digital_Mall_API.Controllers.Reels
                     IsLikedByCurrentUser = userLikes.Contains(reel.Id),
                     PostedByUserType = reel.PostedByUserType,
                     PostedByName = reel.PostedByUserType == "FashionModel"
-                        ? reel.PostedByFashionModel.Name
+                        ? reel.PostedByModel.Name
                         : reel.PostedByBrand.OfficialName,
                     PostedByImage = reel.PostedByUserType == "FashionModel"
-                        ? reel.PostedByFashionModel.ImageUrl
+                        ? reel.PostedByModel.ImageUrl
                         : reel.PostedByBrand.LogoUrl,
                     LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
                     {
@@ -114,7 +114,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     .Where(r => r.UploadStatus == "ready" &&
                                ((r.PostedByUserType == "Brand" && followedBrands.Contains(r.PostedByUserId)) ||
                                 (r.PostedByUserType == "FashionModel" && followedModels.Contains(r.PostedByUserId))))
-                    .Include(r => r.PostedByFashionModel)
+                    .Include(r => r.PostedByModel)
                     .Include(r => r.PostedByBrand)
                     .Include(r => r.LinkedProducts)
                         .ThenInclude(rp => rp.Product)
@@ -142,10 +142,10 @@ namespace Digital_Mall_API.Controllers.Reels
                     IsLikedByCurrentUser = userLikes.Contains(reel.Id),
                     PostedByUserType = reel.PostedByUserType,
                     PostedByName = reel.PostedByUserType == "FashionModel"
-                        ? reel.PostedByFashionModel.Name
+                        ? reel.PostedByModel.Name
                         : reel.PostedByBrand.OfficialName,
                     PostedByImage = reel.PostedByUserType == "FashionModel"
-                        ? reel.PostedByFashionModel.ImageUrl
+                        ? reel.PostedByModel.ImageUrl
                         : reel.PostedByBrand.LogoUrl,
                     LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
                     {

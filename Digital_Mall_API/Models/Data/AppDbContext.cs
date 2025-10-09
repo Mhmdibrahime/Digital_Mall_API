@@ -38,6 +38,8 @@ namespace Digital_Mall_API.Models.Data
 
         public DbSet<ReelProduct> ReelProducts { get; set; }
         public DbSet<TshirtDesignOrder> TshirtDesignOrders { get; set; }
+        public DbSet<TshirtDesignOrderImage> TshirtDesignOrderImages { get; set; }
+        public DbSet<TshirtOrderText> TshirtOrderTexts { get; set; }
         public DbSet<Payout> Payouts { get; set; }
         public DbSet<GlobalCommission> GlobalCommission { get; set; }
         public DbSet<Discount> Discounts { get; set; }
@@ -45,6 +47,7 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<PromoCode> PromoCodes { get; set; }
         public DbSet<PromoCodeUsage> PromoCodeUsages { get; set; }
         public DbSet<TshirtDesignSubmission> TshirtDesignSubmissions { get; set; }
+        public DbSet<TshirtDesignSubmissionImage> TshirtDesignSubmissionImages { get; set; }
         public DbSet<SubCategory> SubCategories { get; set; }
         public DbSet<TshirtTemplate> TshirtTemplates { get; set; }
         public DbSet<TShirtSize> TShirtSizes { get; set; }
@@ -133,19 +136,20 @@ namespace Digital_Mall_API.Models.Data
                 .WithMany(pv => pv.OrderItems)
                 .HasForeignKey(oi => oi.ProductVariantId)
                 .OnDelete(DeleteBehavior.NoAction);
-            modelBuilder.Entity<Reel>()
-                   .HasOne(r => r.PostedByBrand)
-                   .WithMany(b => b.Reels)
-                   .HasForeignKey(r => r.PostedByUserId)
-                   .OnDelete(DeleteBehavior.NoAction)
-                   .HasConstraintName("FK_Reels_Brands_PostedByUserId");
 
             modelBuilder.Entity<Reel>()
-                .HasOne(r => r.PostedByFashionModel)
+    .HasOne(r => r.PostedByBrand)
+    .WithMany(b => b.Reels)
+    .HasForeignKey(r => r.PostedByBrandId)
+    .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Reel>()
+                .HasOne(r => r.PostedByModel)
                 .WithMany(f => f.Reels)
-                .HasForeignKey(r => r.PostedByUserId)
-                .OnDelete(DeleteBehavior.NoAction)
-                .HasConstraintName("FK_Reels_FashionModels_PostedByUserId");
+                .HasForeignKey(r => r.PostedByModelId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+
             modelBuilder.Entity<ReelLike>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -168,6 +172,13 @@ namespace Digital_Mall_API.Models.Data
                 .WithMany()
                 .HasForeignKey(t => t.CustomerUserId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<TshirtDesignOrderImage>()
+    .HasOne(i => i.Order)
+    .WithMany(o => o.Images)
+    .HasForeignKey(i => i.TshirtDesignOrderId)
+    .OnDelete(DeleteBehavior.Cascade);
+
 
             modelBuilder.Entity<Payout>()
                 .HasOne(p => p.PayeeUser)
