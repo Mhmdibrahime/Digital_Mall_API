@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace Digital_Mall_API.Controllers.SuperAdmin
 {
@@ -53,15 +54,14 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
         [HttpGet]
         public async Task<IActionResult> GetModels(
-            [FromQuery] string? search,
-            [FromQuery] string? status,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
+     [FromQuery] string? search,
+     [FromQuery] string? status,
+     [FromQuery] int page = 1,
+     [FromQuery] int pageSize = 20)
         {
             GlobalCommissionRate();
-            var query = _context.FashionModels
-                
-                .AsQueryable();
+
+            var query = _context.FashionModels.AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
             {
@@ -79,25 +79,29 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
             query = query.OrderByDescending(m => m.CreatedAt);
 
-            var models = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(m => new ModelDto
+            var models = await (
+                from m in query
+                join u in _context.Users on m.Id equals u.Id.ToString() into userJoin
+                from u in userJoin.DefaultIfEmpty()
+                select new ModelDto
                 {
                     Id = m.Id,
                     FullName = m.Name,
                     Bio = m.Bio,
                     Status = m.Status,
+                    Email = u != null ? u.Email : "Not Found",
                     CommissionRate = m.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate,
                     CreatedAt = m.CreatedAt,
                     ReelsCount = m.Reels.Count,
                     TotalLikes = m.Reels.Sum(r => r.LikesCount),
                     TotalEarnings = m.Payouts
                         .Where(p => p.Status == "Completed")
-                        .Sum(p => (decimal?)p.Amount) ?? 0m,
-
-                })
-                .ToListAsync();
+                        .Sum(p => (decimal?)p.Amount) ?? 0m
+                }
+            )
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
 
             return Ok(new
             {
@@ -108,6 +112,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 Models = models
             });
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetModelDetails(Guid id)

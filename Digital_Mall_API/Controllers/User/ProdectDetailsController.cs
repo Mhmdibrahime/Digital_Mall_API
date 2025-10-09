@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Digital_Mall_API.Controllers.User
 {
-    [Route("api/[controller]")]
+    [Route("User/[controller]")]
     [ApiController]
     public class ProdectDetailsController : ControllerBase
     {

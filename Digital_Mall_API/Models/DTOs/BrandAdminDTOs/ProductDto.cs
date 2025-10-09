@@ -9,6 +9,7 @@
         public bool IsActive { get; set; }
         public string CategoryName { get; set; }
         public string SubCategoryName { get; set; }
+        public string Gender { get; set; }
   
         public List<ProductVariantDto> Variants { get; set; } = new();
         public List<string> Images { get; set; } = new();

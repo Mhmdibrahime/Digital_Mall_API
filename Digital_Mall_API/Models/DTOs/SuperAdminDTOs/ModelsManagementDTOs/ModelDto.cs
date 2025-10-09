@@ -4,10 +4,10 @@
     {
         public string Id { get; set; }
         public string FullName { get; set; }
-        public string Location { get; set; }
-        public int? Age { get; set; }
         public string Bio { get; set; }
         public string Status { get; set; }
+        public string Email { get; set; }
+        
         public decimal CommissionRate { get; set; }
         public DateTime CreatedAt { get; set; }
         public int ReelsCount { get; set; }

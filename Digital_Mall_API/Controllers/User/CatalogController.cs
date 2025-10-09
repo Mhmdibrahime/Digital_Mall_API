@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Digital_Mall_API.Controllers.User
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("User/[controller]")]
     public class CatalogController : ControllerBase
     {
         private readonly AppDbContext _context;

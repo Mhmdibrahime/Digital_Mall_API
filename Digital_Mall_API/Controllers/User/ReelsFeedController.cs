@@ -10,7 +10,7 @@ using System.Security.Claims;
 namespace Digital_Mall_API.Controllers.Reels
 {
     [ApiController]
-    [Route("api/reels-feed")]
+    [Route("User/reels-feed")]
     public class ReelsFeedController : ControllerBase
     {
         private readonly AppDbContext _context;

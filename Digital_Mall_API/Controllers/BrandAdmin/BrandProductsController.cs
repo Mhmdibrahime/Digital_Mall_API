@@ -69,6 +69,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     IsActive = p.IsActive,
                     CategoryName = p.SubCategory.Category.Name,
                     SubCategoryName = p.SubCategory.Name,
+                    Gender = p.Gender,
                     Variants = p.Variants.Select(v => new ProductVariantDto
                     {
                         Id = v.Id,
@@ -103,6 +104,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 IsActive = product.IsActive,
                 CategoryName = product.SubCategory.Category.Name,
                 SubCategoryName = product.SubCategory.Name,
+                Gender = product.Gender,
                 Variants = product.Variants.Select(v => new ProductVariantDto
                 {
                     Id = v.Id,
