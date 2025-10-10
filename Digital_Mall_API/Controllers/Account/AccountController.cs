@@ -85,11 +85,23 @@ namespace Digital_Mall_API.Controllers.Account
                 Status = "Active",
                 CreatedAt = DateTime.UtcNow
             };
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
+            var confirmationLink = $"{Request.Scheme}://{Request.Host}/Account/confirm-email?userId={user.Id}&token={encodedToken}";
+
+            var message = new Message(
+                new string[] { user.Email },
+                "تفعيل حسابك في Techs Academy",
+                $"<h3>مرحباً {user.DisplayName ?? user.Email} 👋</h3>" +
+                $"<p>اضغط على الرابط التالي لتفعيل حسابك:</p>" +
+                $"<a href='{confirmationLink}'>تأكيد البريد الإلكتروني</a>"
+            );
+            email.SendEmail(message);
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Customer account created successfully." });
+            return Ok(new { message = "تم إنشاء الحساب بنجاح ✅ برجاء تأكيد البريد الإلكتروني قبل تسجيل الدخول." });
         }
 
         
@@ -162,14 +174,27 @@ namespace Digital_Mall_API.Controllers.Account
                 Name = dto.ModelName,
                 Password = dto.Password, 
                 EvidenceOfProofUrl = await _fileService.SaveFileAsync(dto.PersonalProof, "ModelProofs"),
-                Status = "Pending",
+                Status = "Active",
                 CreatedAt = DateTime.UtcNow
             };
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+            var confirmationLink = $"{Request.Scheme}://{Request.Host}/Account/confirm-email?userId={user.Id}&token={encodedToken}";
+
+            var message = new Message(
+                new string[] { user.Email },
+                "تفعيل حسابك في موقع عرض الأزياء",
+                $"<h3>مرحباً {dto.ModelName ?? user.Email} 👋</h3>" +
+                $"<p>اضغط على الرابط التالي لتفعيل حسابك:</p>" +
+                $"<a href='{confirmationLink}'>تأكيد البريد الإلكتروني</a>"
+            );
+            email.SendEmail(message);
 
             _context.FashionModels.Add(model);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Model account created successfully. Waiting for admin approval." });
+            return Ok(new { message = "تم إنشاء الحساب بنجاح ✅ برجاء تأكيد البريد الإلكتروني قبل تسجيل الدخول." });
         }
 
         [HttpPost("login")]
@@ -179,7 +204,9 @@ namespace Digital_Mall_API.Controllers.Account
             if (user is null)
                 return Unauthorized("Invalid credentials.");
 
-            
+            if (!user.EmailConfirmed)
+                return Unauthorized("يرجى تفعيل البريد الإلكتروني أولاً 🔒");
+
             var brand = await _context.Brands.FindAsync(user.Id.ToString());
             if (brand != null && brand.Status != "Active")
                 return Unauthorized("Your account is not yet approved by admin.");
@@ -285,6 +312,24 @@ namespace Digital_Mall_API.Controllers.Account
         {
             var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
             return Ok(claims);
+        }
+        [HttpGet("confirm-email")]
+        public async Task<IActionResult> ConfirmCustomerEmail(Guid userId, string token)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return BadRequest("User not found.");
+
+            var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
+            var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
+
+            if (!result.Succeeded)
+                return BadRequest("Email confirmation failed.");
+
+           
+          
+
+            return Ok("تم تأكيد البريد الإلكتروني بنجاح 🎉 يمكنك الآن تسجيل الدخول.");
         }
     }
 
