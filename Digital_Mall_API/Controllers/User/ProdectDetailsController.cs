@@ -80,8 +80,9 @@ namespace Digital_Mall_API.Controllers.User
                 DiscountStatus = discountStatus,
                 AvailableColors = colors,
                 AvailableSizes = sizes,
+                StockQuantity = product.Variants.Sum(v => v.StockQuantity),
                 Images = images,
-                Count = feedbacksCount,
+                FeedBacksCount = feedbacksCount,
                 AverageRating = Math.Round(averageRating, 1),
                 CreatedAt = product.CreatedAt
             };

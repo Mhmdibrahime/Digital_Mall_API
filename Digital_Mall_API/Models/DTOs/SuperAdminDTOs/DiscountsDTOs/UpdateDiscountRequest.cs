@@ -5,7 +5,7 @@ namespace Digital_Mall_API.Models.DTOs.SuperAdminDTOs.DiscountsDTOs
     public class UpdateDiscountRequest
     {
         
-        public IFormFile File { get; set; }
+        public IFormFile? File { get; set; }
 
         [Required]
         public string Status { get; set; } = "Active";
