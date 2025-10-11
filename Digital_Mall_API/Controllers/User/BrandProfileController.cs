@@ -114,7 +114,10 @@ namespace Digital_Mall_API.Controllers.User
                         p.Price - (p.Price*(p.ProductDiscount.DiscountValue/100)) : p.Price,
                     HasDiscount = p.ProductDiscount != null,
                     MainImage = p.Images.FirstOrDefault().ImageUrl,
+                    
                     BrandName = p.Brand.OfficialName,
+                    StockQuantity = p.Variants.Sum(v => v.StockQuantity),
+
                     p.CreatedAt
                 })
                 .ToListAsync();

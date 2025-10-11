@@ -257,6 +257,10 @@ namespace Digital_Mall_API.Controllers.Model
             {
                 return Unauthorized("Model not authenticated.");
             }
+            var model = await _context.FashionModels.FindAsync(modelId);
+            if (model == null) {
+                return NotFound("Model not found.");
+            }
 
             var modelUserId = await GetModelUserIdAsync(modelId);
             if (!modelUserId.HasValue)
