@@ -96,7 +96,9 @@ namespace Digital_Mall_API.Controllers.User
                         Description = p.Description,
                         OriginalPrice = p.Price,
                         DiscountValue = p.ProductDiscount != null ? p.ProductDiscount.DiscountValue : 0,
-                        DiscountedPrice = p.ProductDiscount != null ? p.Price - p.ProductDiscount.DiscountValue : p.Price,
+                        DiscountedPrice = p.ProductDiscount != null
+                        ? p.Price - (p.Price * p.ProductDiscount.DiscountValue / 100)
+                        : p.Price,
                         DiscountStatus = p.ProductDiscount != null ? "Active" : "None",
                         CreatedAt = p.CreatedAt,
                         StockQuantity = p.Variants.Sum(v => v.StockQuantity)

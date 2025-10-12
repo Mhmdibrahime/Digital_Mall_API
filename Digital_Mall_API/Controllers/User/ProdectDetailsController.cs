@@ -76,7 +76,9 @@ namespace Digital_Mall_API.Controllers.User
                 SubCategory = product.SubCategory?.Name,
                 OriginalPrice = originalPrice,
                 DiscountValue = discountValue,
-                DiscountedPrice = discountedPrice,
+                DiscountedPrice = product.ProductDiscount != null
+                        ? product.Price - (product.Price * product.ProductDiscount.DiscountValue / 100)
+                        : product.Price,
                 DiscountStatus = discountStatus,
                 AvailableColors = colors,
                 AvailableSizes = sizes,
