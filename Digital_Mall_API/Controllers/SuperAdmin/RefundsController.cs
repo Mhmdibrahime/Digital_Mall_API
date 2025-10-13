@@ -122,10 +122,15 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         [HttpPost("{id}/process")]
         public async Task<ActionResult> ProcessRefund(int id, [FromBody] ProcessRefundDto processDto)
         {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
                 var refund = await _context.RefundRequests
                     .Include(r => r.OrderItem)
+                        .ThenInclude(oi => oi.ProductVariant)
+                    .Include(r => r.Customer)
+                    .Include(r => r.Order)
                     .FirstOrDefaultAsync(r => r.Id == id);
 
                 if (refund == null)
@@ -138,6 +143,20 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     return BadRequest("Refund request has already been processed");
                 }
 
+                // Check if this order item already has an approved refund
+                if (processDto.Status == "Approved")
+                {
+                    var existingApprovedRefund = await _context.RefundRequests
+                        .AnyAsync(r => r.OrderItemId == refund.OrderItemId &&
+                                      r.Status == "Approved" &&
+                                      r.Id != refund.Id);
+
+                    if (existingApprovedRefund)
+                    {
+                        return BadRequest("This order item has already been refunded");
+                    }
+                }
+
                 if (processDto.Status != "Approved" && processDto.Status != "Rejected")
                 {
                     return BadRequest("Status must be either 'Approved' or 'Rejected'");
@@ -147,23 +166,48 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 refund.AdminNotes = processDto.AdminNotes;
                 refund.ProcessedDate = DateTime.UtcNow;
 
-                // If approved, you might want to update order status or process payment refund
                 if (processDto.Status == "Approved")
                 {
-                    // Here you can add logic to process the actual refund payment
-                    // For example: update order status, process payment reversal, etc.
-                    // refund.OrderItem.Order.Status = "Refunded";
+                    // Calculate refund amount
+                    decimal refundAmount = refund.OrderItem.PriceAtTimeOfPurchase * refund.OrderItem.Quantity;
+                    refund.RefundAmount = refundAmount;
+
+                    // 1. Refund to customer's wallet balance
+                    refund.Customer.WalletBalance += refundAmount;
+
+                    // 2. Restore product stock
+                    var productVariant = await _context.ProductVariants
+                        .FindAsync(refund.OrderItem.ProductVariantId);
+
+                    if (productVariant != null)
+                    {
+                        productVariant.StockQuantity += refund.OrderItem.Quantity;
+                    }
+
+                    // 3. Mark order item as refunded
+                    refund.OrderItem.IsRefunded = true;
+                    refund.OrderItem.RefundRequestId = refund.Id;
+
+                    // 4. Update order status
+                    await UpdateOrderStatusBasedOnRefunds(refund.OrderId);
                 }
 
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
-                return Ok(new { message = $"Refund request has been {processDto.Status.ToLower()}" });
+                return Ok(new
+                {
+                    message = $"Refund request has been {processDto.Status.ToLower()}",
+                    refundAmount = processDto.Status == "Approved" ? refund.RefundAmount : 0
+                });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return StatusCode(500, $"Error processing refund: {ex.Message}");
             }
         }
+
 
         [HttpDelete("DeleteRefundRequest/{id}")]
         public async Task<ActionResult> DeleteRefundRequest(int id)
@@ -196,7 +240,57 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 return StatusCode(500, $"Error deleting refund request: {ex.Message}");
             }
         }
+        private async Task UpdateOrderStatusBasedOnRefunds(int orderId)
+        {
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order != null)
+            {
+                var totalItems = order.OrderItems.Count;
+                var refundedItems = order.OrderItems.Count(oi => oi.IsRefunded);
+
+                if (totalItems == refundedItems && totalItems > 0)
+                {
+                    order.Status = "Fully Refunded";
+                    order.PaymentStatus = "Refunded";
+                }
+                else if (refundedItems > 0)
+                {
+                    order.Status = "Partially Refunded";
+                    order.PaymentStatus = "Partially Refunded";
+                }
+                // If no items refunded, status remains as is
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private async Task UpdateBrandRefundStatistics(string brandId)
+        {
+            var brandStats = await _context.BrandStatistics
+                .FirstOrDefaultAsync(bs => bs.BrandId == brandId);
+
+            if (brandStats == null)
+            {
+                brandStats = new BrandStatistics
+                {
+                    BrandId = brandId,
+                    TotalRefunds = 1,
+                    TotalRefundAmount = 0,
+                    LastUpdated = DateTime.UtcNow
+                };
+                _context.BrandStatistics.Add(brandStats);
+            }
+            else
+            {
+                brandStats.TotalRefunds += 1;
+                brandStats.LastUpdated = DateTime.UtcNow;
+            }
+        }
 
        
+
     }
 }

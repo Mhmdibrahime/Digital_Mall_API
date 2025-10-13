@@ -50,6 +50,8 @@ namespace Digital_Mall_API
             builder.Services.AddScoped<IEmailSender, EmailSender>();
 
             builder.Services.AddScoped<IMuxService, MuxService>();
+            builder.Services.AddScoped<IPaymobService, PaymobService>();
+            builder.Services.AddHttpClient<IPaymobService, PaymobService>();
 
             builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
                 .AddEntityFrameworkStores<AppDbContext>()

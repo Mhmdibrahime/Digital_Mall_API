@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Digital_Mall_API.Models.Entities.User___Authentication;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Digital_Mall_API.Models.Entities.Promotions
@@ -36,7 +37,9 @@ namespace Digital_Mall_API.Models.Entities.Promotions
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
+        public string? BrandId { get; set; }
 
         public virtual List<PromoCodeUsage> Usages { get; set; } = new List<PromoCodeUsage>();
+        public virtual Brand? Brand { get; set; }
     }
 }

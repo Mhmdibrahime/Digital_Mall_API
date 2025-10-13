@@ -4,6 +4,7 @@ using Digital_Mall_API.Models.Entities.Promotions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Digital_Mall_API.Controllers.BrandAdmin
 {
@@ -23,9 +24,18 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
     [FromQuery] int page = 1,
     [FromQuery] int pageSize = 20)
         {
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands.FirstOrDefaultAsync(b => b.Id == userId.ToString());
+            if (brand == null)
+            { return Unauthorized("Brand not found."); }
             var query = _context.PromoCodes
                 .Include(p => p.Usages)
                     .ThenInclude(u => u.Customer)
+                    .Where(p => p.BrandId == brand.Id)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(status) && status != "All")
@@ -85,9 +95,18 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpGet("GetPromoCode/{id}")]
         public async Task<ActionResult<PromoCodeDto>> GetPromoCode(int id)
         {
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands.FirstOrDefaultAsync(b => b.Id == userId.ToString());
+            if (brand == null)
+            { return Unauthorized("Brand not found."); }
             var promoCode = await _context.PromoCodes
                 .Include(p => p.Usages)
                     .ThenInclude(u => u.Customer)
+                    .Where(p => p.BrandId == brand.Id)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (promoCode == null)
@@ -125,7 +144,17 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpPost]
         public async Task<ActionResult<PromoCodeDto>> CreatePromoCode(CreatePromoCodeDto createPromoCodeDto)
         {
-            if (createPromoCodeDto.StartDate >= createPromoCodeDto.EndDate)
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+           var brand = await _context.Brands.FirstOrDefaultAsync(b => b.Id == userId.ToString());
+           if (brand == null)
+            { return Unauthorized("Brand not found."); }
+
+
+                if (createPromoCodeDto.StartDate >= createPromoCodeDto.EndDate)
             {
                 return BadRequest("End date must be after start date.");
             }
@@ -146,7 +175,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 EndDate = createPromoCodeDto.EndDate,
                 Status = createPromoCodeDto.StartDate <= DateTime.UtcNow && createPromoCodeDto.EndDate >= DateTime.UtcNow
                     ? "Active" : "Inactive",
-                IsSingleUse = true
+                IsSingleUse = true,
+                BrandId = brand?.Id,
             };
 
             _context.PromoCodes.Add(promoCode);
@@ -158,6 +188,14 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePromoCode(int id, UpdatePromoCodeDto updatePromoCodeDto)
         {
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands.FirstOrDefaultAsync(b => b.Id == userId.ToString());
+            if (brand == null)
+            { return Unauthorized("Brand not found."); }
             var promoCode = await _context.PromoCodes.FindAsync(id);
             if (promoCode == null)
             {
@@ -211,6 +249,14 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePromoCode(int id)
         {
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands.FirstOrDefaultAsync(b => b.Id == userId.ToString());
+            if (brand == null)
+            { return Unauthorized("Brand not found."); }
             var promoCode = await _context.PromoCodes.FindAsync(id);
             if (promoCode == null)
             {

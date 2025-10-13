@@ -838,6 +838,12 @@ namespace Digital_Mall_API.Controllers
                     return BadRequest("Order item not found");
                 }
 
+                // Check if order item is already refunded
+                if (orderItem.IsRefunded)
+                {
+                    return BadRequest("This order item has already been refunded");
+                }
+
                 var existingRefund = await _context.RefundRequests
                     .FirstOrDefaultAsync(r => r.OrderItemId == requestDto.OrderItemId && r.Status != "Rejected");
 

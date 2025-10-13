@@ -89,6 +89,8 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
             {
                 SubmissionId = s.Id,
                 ClientName = s.Order.CustomerUser?.FullName ?? "Unknown",
+                PhoneNumber = context.Users.FirstOrDefault(x => x.Id.ToString() == s.Order.CustomerUser.Id).PhoneNumber ?? "Unknown",
+
                 DesignName = s.DesignName,
                 Description = s.Description,
                 SubmissionDate = s.SubmissionDate,

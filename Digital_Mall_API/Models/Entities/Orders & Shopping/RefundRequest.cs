@@ -37,6 +37,7 @@ namespace Digital_Mall_API.Models.Entities.Orders___Shopping
 
         [StringLength(500)]
         public string? AdminNotes { get; set; }
+        public decimal RefundAmount { get; set; } = 0.0m;
 
         public virtual Order Order { get; set; }
         public virtual OrderItem OrderItem { get; set; }

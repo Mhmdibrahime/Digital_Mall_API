@@ -16,6 +16,7 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         public string Password { get; set; }
         [StringLength(50)]
         public string Status { get; set; } = "Active";
+        public decimal WalletBalance { get; set; } = 0.0m;
         public virtual List<Order>? Orders { get; set; } = new List<Order>();
         public virtual List<TshirtDesignOrder>? DesignOrders { get; set; } = new List<TshirtDesignOrder>();
         public virtual List<FollowingBrand>? FollowingBrands { get; set; } = new List<FollowingBrand>();

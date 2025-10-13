@@ -33,6 +33,8 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<RefundRequest> RefundRequests { get; set; }
+        public DbSet<BrandStatistics> BrandStatistics { get; set; }
+        public DbSet<RefundTransaction> RefundTransactions { get; set; }
         public DbSet<Reel> Reels { get; set; }
         public DbSet<ReelLike> ReelLikes { get; set; }
 
@@ -55,18 +57,30 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<ReelCommission> ReelCommissions { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
         public DbSet<ProductFeedback> ProductFeedbacks { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            // Table mappings
             modelBuilder.Entity<ApplicationUser>().ToTable("AspNetUsers");
             modelBuilder.Entity<Customer>().ToTable("Customers");
             modelBuilder.Entity<Brand>().ToTable("Brands");
             modelBuilder.Entity<FashionModel>().ToTable("FashionModels");
             modelBuilder.Entity<TshirtDesigner>().ToTable("TshirtDesigners");
 
-           
+            // One-to-one relationship between OrderItem and RefundRequest
+            modelBuilder.Entity<OrderItem>()
+                .HasOne(oi => oi.RefundRequest)
+                .WithOne(rr => rr.OrderItem)
+                .HasForeignKey<RefundRequest>(rr => rr.OrderItemId)
+                .OnDelete(DeleteBehavior.NoAction);
 
+            modelBuilder.Entity<RefundRequest>()
+                .HasIndex(rr => rr.OrderItemId)
+                .IsUnique();
+
+            // ReelProduct many-to-many relationship
             modelBuilder.Entity<ReelProduct>()
                 .HasKey(rp => new { rp.ReelId, rp.ProductId });
 
@@ -82,48 +96,19 @@ namespace Digital_Mall_API.Models.Data
                 .HasForeignKey(rp => rp.ProductId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Order relationships
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.Customer)
                 .WithMany(c => c.Orders)
                 .HasForeignKey(o => o.CustomerId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // OrderItem relationships
             modelBuilder.Entity<OrderItem>()
                .HasOne(oi => oi.Brand)
                .WithMany(b => b.OrderItems)
                .HasForeignKey(oi => oi.BrandId)
                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Product>()
-                .HasOne(p => p.Brand)
-                .WithMany(b => b.Products)
-                .HasForeignKey(p => p.BrandId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<Product>()
-                .HasOne(p => p.SubCategory)
-                .WithMany(c => c.Products)
-                .HasForeignKey(p => p.SubCategoryId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<ProductVariant>()
-                .HasOne(pv => pv.Product)
-                .WithMany(p => p.Variants)
-                .HasForeignKey(pv => pv.ProductId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<ProductImage>()
-                .HasOne(pi => pi.Product)
-                .WithMany(p => p.Images)
-                .HasForeignKey(pi => pi.ProductId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<Product>()
-                .HasOne(p => p.ProductDiscount)
-                .WithMany(pd => pd.Products)
-                .HasForeignKey(p => p.ProductDiscountId)
-                .OnDelete(DeleteBehavior.SetNull);
-
 
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.Order)
@@ -137,11 +122,45 @@ namespace Digital_Mall_API.Models.Data
                 .HasForeignKey(oi => oi.ProductVariantId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Product relationships
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.Brand)
+                .WithMany(b => b.Products)
+                .HasForeignKey(p => p.BrandId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.SubCategory)
+                .WithMany(c => c.Products)
+                .HasForeignKey(p => p.SubCategoryId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.ProductDiscount)
+                .WithMany(pd => pd.Products)
+                .HasForeignKey(p => p.ProductDiscountId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // ProductVariant relationships
+            modelBuilder.Entity<ProductVariant>()
+                .HasOne(pv => pv.Product)
+                .WithMany(p => p.Variants)
+                .HasForeignKey(pv => pv.ProductId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // ProductImage relationships
+            modelBuilder.Entity<ProductImage>()
+                .HasOne(pi => pi.Product)
+                .WithMany(p => p.Images)
+                .HasForeignKey(pi => pi.ProductId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Reel relationships
             modelBuilder.Entity<Reel>()
-    .HasOne(r => r.PostedByBrand)
-    .WithMany(b => b.Reels)
-    .HasForeignKey(r => r.PostedByBrandId)
-    .OnDelete(DeleteBehavior.NoAction);
+                .HasOne(r => r.PostedByBrand)
+                .WithMany(b => b.Reels)
+                .HasForeignKey(r => r.PostedByBrandId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Reel>()
                 .HasOne(r => r.PostedByModel)
@@ -149,7 +168,7 @@ namespace Digital_Mall_API.Models.Data
                 .HasForeignKey(r => r.PostedByModelId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-
+            // ReelLike relationships
             modelBuilder.Entity<ReelLike>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -167,29 +186,124 @@ namespace Digital_Mall_API.Models.Data
                 entity.HasIndex(rl => new { rl.CustomerId, rl.ReelId })
                       .IsUnique();
             });
+
+            // TshirtDesignOrder relationships
             modelBuilder.Entity<TshirtDesignOrder>()
                 .HasOne(t => t.CustomerUser)
                 .WithMany()
                 .HasForeignKey(t => t.CustomerUserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // TshirtDesignOrderImage relationships
             modelBuilder.Entity<TshirtDesignOrderImage>()
-    .HasOne(i => i.Order)
-    .WithMany(o => o.Images)
-    .HasForeignKey(i => i.TshirtDesignOrderId)
-    .OnDelete(DeleteBehavior.Cascade);
+                .HasOne(i => i.Order)
+                .WithMany(o => o.Images)
+                .HasForeignKey(i => i.TshirtDesignOrderId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-
+            // Payout relationships
             modelBuilder.Entity<Payout>()
                 .HasOne(p => p.PayeeUser)
                 .WithMany()
                 .HasForeignKey(p => p.PayeeUserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Category relationships
             modelBuilder.Entity<Category>()
                 .HasMany(c => c.SubCategories)
                 .WithOne(sc => sc.Category)
                 .HasForeignKey(sc => sc.CategoryId);
+
+            // Decimal type configurations
+            modelBuilder.Entity<BrandStatistics>()
+                .Property(b => b.TotalRefundAmount)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<RefundRequest>()
+                .Property(r => r.RefundAmount)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<RefundTransaction>()
+                .Property(r => r.Amount)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<PromoCodeUsage>()
+                .Property(p => p.DiscountAmount)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<PromoCodeUsage>()
+                .Property(p => p.OrderTotal)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<Customer>()
+                .Property(c => c.WalletBalance)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<TshirtDesignOrder>()
+                .Property(t => t.Length)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<TshirtDesignOrder>()
+                .Property(t => t.Weight)
+                .HasColumnType("decimal(18,2)");
+
+            // RefundTransaction relationships
+            modelBuilder.Entity<RefundTransaction>()
+                .HasOne(rt => rt.RefundRequest)
+                .WithMany()
+                .HasForeignKey(rt => rt.RefundRequestId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<RefundTransaction>()
+                .HasOne(rt => rt.Customer)
+                .WithMany()
+                .HasForeignKey(rt => rt.CustomerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // RefundRequest relationships
+            modelBuilder.Entity<RefundRequest>()
+                .HasOne(rr => rr.Order)
+                .WithMany()
+                .HasForeignKey(rr => rr.OrderId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<RefundRequest>()
+                .HasOne(rr => rr.Customer)
+                .WithMany()
+                .HasForeignKey(rr => rr.CustomerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // PromoCode relationships
+            modelBuilder.Entity<PromoCode>()
+                .HasOne(pc => pc.Brand)
+                .WithMany()
+                .HasForeignKey(pc => pc.BrandId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<PromoCodeUsage>()
+                .HasOne(pcu => pcu.PromoCode)
+                .WithMany(pc => pc.Usages)
+                .HasForeignKey(pcu => pcu.PromoCodeId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<PromoCodeUsage>()
+                .HasOne(pcu => pcu.Customer)
+                .WithMany()
+                .HasForeignKey(pcu => pcu.CustomerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<PromoCodeUsage>()
+                .HasOne(pcu => pcu.Order)
+                .WithMany()
+                .HasForeignKey(pcu => pcu.OrderId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // BrandStatistics relationships
+            modelBuilder.Entity<BrandStatistics>()
+                .HasOne(bs => bs.Brand)
+                .WithMany()
+                .HasForeignKey(bs => bs.BrandId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }
