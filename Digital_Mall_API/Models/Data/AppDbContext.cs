@@ -1,14 +1,15 @@
-﻿using Digital_Mall_API.Models.Entities.User___Authentication;
-using Digital_Mall_API.Models.Entities.Product_Catalog;
+﻿using Digital_Mall_API.Models.Entities.Financials;
+using Digital_Mall_API.Models.Entities.Logs;
 using Digital_Mall_API.Models.Entities.Orders___Shopping;
+using Digital_Mall_API.Models.Entities.PlatformSettings;
+using Digital_Mall_API.Models.Entities.Product_Catalog;
+using Digital_Mall_API.Models.Entities.Promotions;
 using Digital_Mall_API.Models.Entities.Reels___Content;
 using Digital_Mall_API.Models.Entities.T_Shirt_Customization;
-using Digital_Mall_API.Models.Entities.Financials;
+using Digital_Mall_API.Models.Entities.User___Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Digital_Mall_API.Models.Entities.Promotions;
-using Digital_Mall_API.Models.Entities.PlatformSettings;
 
 namespace Digital_Mall_API.Models.Data
 {
@@ -17,6 +18,8 @@ namespace Digital_Mall_API.Models.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
+
+        public DbSet<WebhookLog> WebhookLogs { get; set; }
 
         public DbSet<PlatformSettings> PlatformSettings { get; set; }
         public DbSet<Customer> Customers { get; set; }
@@ -304,6 +307,13 @@ namespace Digital_Mall_API.Models.Data
                 .WithMany()
                 .HasForeignKey(bs => bs.BrandId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<WebhookLog>(entity =>
+            {
+                entity.HasIndex(e => e.LogDate);
+                entity.HasIndex(e => e.WebhookType);
+                entity.HasIndex(e => e.LogLevel);
+            });
         }
     }
 }

@@ -107,11 +107,11 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
 
                 Texts = order.Texts.Select(t => new AddOrderTextDto
                 {
-                    Text = t.Text,
-                    FontFamily = t.FontFamily,
-                    FontColor = t.FontColor,
-                    FontSize = t.FontSize,
-                    FontStyle = t.FontStyle
+                    text = t.Text,
+                    fontFamily = t.FontFamily,
+                    fontColor = t.FontColor,
+                    fontSize = t.FontSize,
+                    fontStyle = t.FontStyle
                 }).ToList(),
 
                 FinalDesignUrl = order.FinalDesignUrl,

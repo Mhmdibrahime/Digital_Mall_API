@@ -4,6 +4,7 @@ using Digital_Mall_API.Models.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Digital_Mall_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251013190355_logs")]
+    partial class logs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -171,6 +174,11 @@ namespace Digital_Mall_API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateTime>("LogDate")
                         .HasColumnType("datetime2");
 
@@ -181,8 +189,26 @@ namespace Digital_Mall_API.Migrations
 
                     b.Property<string>("Message")
                         .IsRequired()
-                        .HasMaxLength(1500)
-                        .HasColumnType("nvarchar(1500)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("MuxAssetId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("ReelId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RequestBody")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RequestHeaders")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("WebhookType")
                         .IsRequired()
@@ -194,6 +220,8 @@ namespace Digital_Mall_API.Migrations
                     b.HasIndex("LogDate");
 
                     b.HasIndex("LogLevel");
+
+                    b.HasIndex("ReelId");
 
                     b.HasIndex("WebhookType");
 
@@ -1098,9 +1126,10 @@ namespace Digital_Mall_API.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<int>("FontSize")
+                    b.Property<string>("FontSize")
+                        .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("int");
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("FontStyle")
                         .IsRequired()
@@ -1776,6 +1805,15 @@ namespace Digital_Mall_API.Migrations
                     b.Navigation("OrderItem");
 
                     b.Navigation("Product");
+
+                    b.Navigation("Reel");
+                });
+
+            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Logs.WebhookLog", b =>
+                {
+                    b.HasOne("Digital_Mall_API.Models.Entities.Reels___Content.Reel", "Reel")
+                        .WithMany()
+                        .HasForeignKey("ReelId");
 
                     b.Navigation("Reel");
                 });

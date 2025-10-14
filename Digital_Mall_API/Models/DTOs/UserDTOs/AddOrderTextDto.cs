@@ -2,10 +2,10 @@
 {
     public class AddOrderTextDto
     {
-        public string Text { get; set; }
-        public string FontFamily { get; set; } = "Arial";
-        public string FontColor { get; set; } = "#000000";
-        public string FontSize { get; set; } = "M";
-        public string FontStyle { get; set; } = "Normal";
+        public string text { get; set; } = "None";
+        public string fontFamily { get; set; } = "Arial";
+        public string fontColor { get; set; } = "#000000";
+        public int fontSize { get; set; } = 0;
+        public string fontStyle { get; set; } = "Normal";
     }
 }

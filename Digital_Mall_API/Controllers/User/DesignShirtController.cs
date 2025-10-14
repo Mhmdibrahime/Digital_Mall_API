@@ -163,7 +163,7 @@ namespace Digital_Mall_API.Controllers.User
                     try
                     {
                         var texts = JsonSerializer.Deserialize<List<AddOrderTextDto>>(textsJson,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                            new JsonSerializerOptions {});
 
                         if (texts != null && texts.Any())
                         {
@@ -171,11 +171,11 @@ namespace Digital_Mall_API.Controllers.User
                             {
                                 order.Texts.Add(new TshirtOrderText
                                 {
-                                    Text = text.Text,
-                                    FontFamily = text.FontFamily,
-                                    FontColor = text.FontColor,
-                                    FontSize = text.FontSize,
-                                    FontStyle = text.FontStyle
+                                    Text = text.text,
+                                    FontFamily = text.fontFamily,
+                                    FontColor = text.fontColor,
+                                    FontSize = text.fontSize,
+                                    FontStyle = text.fontStyle
                                 });
                             }
                         }
@@ -254,11 +254,11 @@ namespace Digital_Mall_API.Controllers.User
                 RequestDate = o.RequestDate,
                 Texts = o.Texts.Select(t => new AddOrderTextDto
                 {
-                    Text = t.Text,
-                    FontFamily = t.FontFamily,
-                    FontColor = t.FontColor,
-                    FontSize = t.FontSize,
-                    FontStyle = t.FontStyle
+                    text = t.Text,
+                    fontFamily = t.FontFamily,
+                    fontColor = t.FontColor,
+                    fontSize = t.FontSize,
+                    fontStyle = t.FontStyle
                 }).ToList()
             }).ToList();
 

@@ -21,7 +21,7 @@ namespace Digital_Mall_API.Models.Entities.T_Shirt_Customization
         public string FontColor { get; set; } = "#000000"; 
 
         [StringLength(10)]
-        public string FontSize { get; set; } = "M"; 
+        public int FontSize { get; set; } = 0; 
 
         [StringLength(50)]
         public string FontStyle { get; set; } = "Normal"; 
