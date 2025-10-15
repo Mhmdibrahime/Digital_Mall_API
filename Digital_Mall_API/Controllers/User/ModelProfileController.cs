@@ -41,7 +41,7 @@ namespace Digital_Mall_API.Controllers.User
                 .CountAsync(f => f.FashionModelId == modelId);
 
             var reelsCount = await _context.Reels
-                .CountAsync(r => r.PostedByModelId == modelId && r.UploadStatus == "completed");
+                .CountAsync(r => r.PostedByModelId == modelId && r.UploadStatus == "ready");
 
             var totalLikes = await _context.Reels
                 .Where(r => r.PostedByModelId == modelId)
@@ -87,7 +87,7 @@ namespace Digital_Mall_API.Controllers.User
                 return NotFound(new { message = "Model not found" });
 
             var query = _context.Reels
-                .Where(r => r.PostedByModelId == modelId && r.UploadStatus == "completed")
+                .Where(r => r.PostedByModelId == modelId && r.UploadStatus == "ready")
                 .Include(r => r.LinkedProducts)
                     .ThenInclude(rp => rp.Product)
                         .ThenInclude(p => p.Images)

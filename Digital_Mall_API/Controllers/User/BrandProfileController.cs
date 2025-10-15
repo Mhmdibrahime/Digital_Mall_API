@@ -44,7 +44,7 @@ namespace Digital_Mall_API.Controllers.User
             var productsCount = await _context.Products
                 .CountAsync(p => p.BrandId == brandId && p.IsActive);
 
-            var reelsCount = await _context.Reels
+            var reelsCount = await _context.Reels.Where(r => r.UploadStatus == "ready")
                 .CountAsync(r => r.PostedByBrandId == brandId);
 
             var totalLikes = await _context.Reels
@@ -143,7 +143,7 @@ namespace Digital_Mall_API.Controllers.User
                 return NotFound(new { message = "Brand not found" });
 
             var query = _context.Reels
-                .Where(r => r.PostedByBrandId == brandId && r.UploadStatus == "completed")
+                .Where(r => r.PostedByBrandId == brandId && r.UploadStatus == "ready")
                 .Include(r => r.LinkedProducts)
                     .ThenInclude(rp => rp.Product)
                         .ThenInclude(p => p.Images)
