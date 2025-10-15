@@ -245,11 +245,16 @@ namespace Digital_Mall_API.Controllers.Reels
             if (page < 1) page = 1;
             if (pageSize < 1 || pageSize > 100) pageSize = 20;
 
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+            
             var query = _context.Reels
                 .Include(r => r.PostedByModel)
                 .Include(r => r.PostedByBrand)
                 .Include(r => r.LinkedProducts)
                     .ThenInclude(rp => rp.Product)
+                    .Where(x=> x.PostedByUserId == userId && x.UploadStatus == "ready")
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
@@ -278,6 +283,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     PostedDate = r.PostedDate,
                     UploadStatus = r.UploadStatus,
                     PostedByUserType = r.PostedByUserType,
+                    
                     PostedByName = r.PostedByUserType == "FashionModel"
                         ? r.PostedByModel.Name
                         : r.PostedByBrand.OfficialName,

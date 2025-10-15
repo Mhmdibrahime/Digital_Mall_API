@@ -14,6 +14,7 @@ namespace Digital_Mall_API.Models.DTOs.UserDTOs.ReelsDTOs
         public int SharesCount { get; set; }
         public bool IsLikedByCurrentUser { get; set; }
         public string PostedByUserType { get; set; }
+        public string PostedByUserId { get; set; }
         public string PostedByName { get; set; }
         public string? PostedByImage { get; set; }
         public List<ReelProductDto> LinkedProducts { get; set; } = new();

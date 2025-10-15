@@ -41,6 +41,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     .Include(r => r.PostedByBrand)
                     .Include(r => r.LinkedProducts)
                         .ThenInclude(rp => rp.Product)
+                        .ThenInclude(p => p.Images)
                     .AsQueryable();
 
                 var forYouReels = await GetForYouAlgorithmReels(baseQuery, customerId, page, pageSize);
@@ -63,6 +64,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     SharesCount = reel.SharesCount,
                     IsLikedByCurrentUser = userLikes.Contains(reel.Id),
                     PostedByUserType = reel.PostedByUserType,
+                    PostedByUserId = reel.PostedByUserId,
                     PostedByName = reel.PostedByUserType == "FashionModel"
                         ? reel.PostedByModel.Name
                         : reel.PostedByBrand.OfficialName,
@@ -74,7 +76,7 @@ namespace Digital_Mall_API.Controllers.Reels
                         ProductId = rp.ProductId,
                         ProductName = rp.Product.Name,
                         ProductPrice = rp.Product.Price,
-                        ProductImageUrl = rp.Product.Images.FirstOrDefault()?.ImageUrl
+                        ProductImageUrl = rp.Product.Images.Select(i => i.ImageUrl).FirstOrDefault()
                     }).ToList()
                 }).ToList();
 
@@ -118,6 +120,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     .Include(r => r.PostedByBrand)
                     .Include(r => r.LinkedProducts)
                         .ThenInclude(rp => rp.Product)
+                        .ThenInclude(p => p.Images)
                     .OrderByDescending(r => r.PostedDate)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
@@ -141,6 +144,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     SharesCount = reel.SharesCount,
                     IsLikedByCurrentUser = userLikes.Contains(reel.Id),
                     PostedByUserType = reel.PostedByUserType,
+                    PostedByUserId = reel.PostedByUserId,
                     PostedByName = reel.PostedByUserType == "FashionModel"
                         ? reel.PostedByModel.Name
                         : reel.PostedByBrand.OfficialName,
@@ -152,7 +156,7 @@ namespace Digital_Mall_API.Controllers.Reels
                         ProductId = rp.ProductId,
                         ProductName = rp.Product.Name,
                         ProductPrice = rp.Product.Price,
-                        ProductImageUrl = rp.Product.Images.FirstOrDefault()?.ImageUrl
+                        ProductImageUrl = rp.Product.Images.Select(i => i.ImageUrl).FirstOrDefault()
                     }).ToList()
                 }).ToList();
 
@@ -304,17 +308,11 @@ namespace Digital_Mall_API.Controllers.Reels
         }
 
         private async Task<List<Reel>> GetForYouAlgorithmReels(
-            IQueryable<Reel> baseQuery,
-            string customerId,
-            int page,
-            int pageSize)
+    IQueryable<Reel> baseQuery,
+    string customerId,
+    int page,
+    int pageSize)
         {
-            // Algorithm components:
-            // 1. Popularity (likes + shares)
-            // 2. Recency
-            // 3. Diversity (mix of brands/models)
-            // 4. User preferences (based on past interactions)
-
             var pageStart = (page - 1) * pageSize;
             var halfPageSize = pageSize / 2;
 
@@ -337,9 +335,9 @@ namespace Digital_Mall_API.Controllers.Reels
 
             // Split the feed into different categories for diversity
             var popularReels = await baseQuery
-                .Where(r => r.PostedDate >= DateTime.UtcNow.AddDays(-30)) // Last 30 days
-                .OrderByDescending(r => (r.LikesCount * 2) + r.SharesCount) // Weighted popularity
-                .Take(halfPageSize * 2) // Get more for sampling
+                .Where(r => r.PostedDate >= DateTime.UtcNow.AddDays(-30))
+                .OrderByDescending(r => (r.LikesCount * 2) + r.SharesCount)
+                .Take(halfPageSize * 2)
                 .ToListAsync();
 
             var recentReels = await baseQuery
@@ -349,34 +347,36 @@ namespace Digital_Mall_API.Controllers.Reels
 
             var followingReels = await baseQuery
                 .Where(r => (r.PostedByUserType == "Brand" && followedBrands.Contains(r.PostedByUserId)) ||
-                           (r.PostedByUserType == "FashionModel" && followedModels.Contains(r.PostedByUserId)))
+                            (r.PostedByUserType == "FashionModel" && followedModels.Contains(r.PostedByUserId)))
                 .OrderByDescending(r => r.PostedDate)
                 .Take(halfPageSize)
                 .ToListAsync();
 
             // Combine and shuffle for variety
             var allReels = new List<Reel>();
-
-            // Add following reels first (highest priority)
             allReels.AddRange(followingReels);
 
-            // Add popular reels (avoid duplicates)
+            // Popular reels (avoid duplicates)
+            var allReelIds = allReels.Select(r => r.Id).ToList();
             allReels.AddRange(popularReels
-                .Where(r => !allReels.Any(ar => ar.Id == r.Id))
+                .Where(r => !allReelIds.Contains(r.Id))
                 .Take(halfPageSize));
 
-            // Add recent reels (avoid duplicates)
+            // Recent reels (avoid duplicates)
+            allReelIds = allReels.Select(r => r.Id).ToList();
             allReels.AddRange(recentReels
-                .Where(r => !allReels.Any(ar => ar.Id == r.Id))
+                .Where(r => !allReelIds.Contains(r.Id))
                 .Take(pageSize - allReels.Count));
 
-            // If we still need more reels, get random ones
+            // If still need more reels, get random ones
             if (allReels.Count < pageSize)
             {
                 var remainingCount = pageSize - allReels.Count;
+                var allReelIds2 = allReels.Select(r => r.Id).ToList();
+
                 var randomReels = await baseQuery
-                    .Where(r => !allReels.Any(ar => ar.Id == r.Id))
-                    .OrderBy(r => Guid.NewGuid()) // Random order
+                    .Where(r => !allReelIds2.Contains(r.Id))
+                    .OrderBy(r => Guid.NewGuid())
                     .Take(remainingCount)
                     .ToListAsync();
 
@@ -389,5 +389,6 @@ namespace Digital_Mall_API.Controllers.Reels
                 .Take(pageSize)
                 .ToList();
         }
+
     }
 }
