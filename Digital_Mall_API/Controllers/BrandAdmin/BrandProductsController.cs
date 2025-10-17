@@ -238,11 +238,11 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         public async Task<ActionResult> Update(
     int id,
     [FromForm] ProductCreateDto dto,
-    [FromQuery] string pVariantsJson
-)
+    [FromQuery] string pVariantsJson)
         {
             var product = await _context.Products
                 .Include(p => p.Variants)
+                    .ThenInclude(v => v.OrderItems) // Include OrderItems to check for associations
                 .Include(p => p.Images)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -266,26 +266,25 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 product.Gender = dto.Gender;
                 product.SubCategoryId = dto.SubCategoryId;
 
-                // Remove old variants and add new ones
-                _context.ProductVariants.RemoveRange(product.Variants);
+                // Smart variant update logic
                 if (PVariants != null && PVariants.Any())
                 {
-                    foreach (var variantDto in PVariants)
-                    {
-                        _context.ProductVariants.Add(new ProductVariant
-                        {
-                            ProductId = product.Id,
-                            Color = variantDto.Color,
-                            Size = variantDto.Size,
-                            StockQuantity = variantDto.StockQuantity
-                        });
-                    }
+                    await UpdateProductVariants(product, PVariants);
+                }
+                else
+                {
+                    // If no variants provided, remove only variants without orders
+                    var variantsWithoutOrders = product.Variants
+                        .Where(v => !v.OrderItems.Any())
+                        .ToList();
+
+                    _context.ProductVariants.RemoveRange(variantsWithoutOrders);
                 }
 
-                // Handle product images
+                // Handle product images (images typically don't have order associations)
                 if (dto.Images != null && dto.Images.Count > 0)
                 {
-                    // Remove old images
+                    // Remove old images (usually safe since images don't have direct order relationships)
                     _context.ProductImages.RemoveRange(product.Images);
 
                     foreach (var file in dto.Images)
@@ -315,16 +314,104 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             }
         }
 
+        private async Task UpdateProductVariants(Product product, List<VariantCreateDto> newVariants)
+        {
+            var existingVariants = product.Variants.ToList();
+            var variantsWithOrders = new List<ProductVariant>();
+            var variantsToRemove = new List<ProductVariant>();
+            var variantsToUpdate = new List<ProductVariant>();
+            var variantsToAdd = new List<ProductVariant>();
+
+            // Separate variants with and without orders
+            foreach (var existingVariant in existingVariants)
+            {
+                if (existingVariant.OrderItems.Any())
+                {
+                    variantsWithOrders.Add(existingVariant);
+                }
+                else
+                {
+                    variantsToRemove.Add(existingVariant);
+                }
+            }
+
+            // Match existing variants with new variant data
+            foreach (var newVariant in newVariants)
+            {
+                // Try to find existing variant with same color/size
+                var existingVariant = existingVariants
+                    .FirstOrDefault(v =>
+                        v.Color == newVariant.Color &&
+                        v.Size == newVariant.Size);
+
+                if (existingVariant != null)
+                {
+                    // Update existing variant
+                    existingVariant.StockQuantity = newVariant.StockQuantity;
+                    variantsToUpdate.Add(existingVariant);
+
+                    // Remove from removal list if it was there
+                    variantsToRemove.Remove(existingVariant);
+                }
+                else
+                {
+                    // Create new variant
+                    variantsToAdd.Add(new ProductVariant
+                    {
+                        ProductId = product.Id,
+                        Color = newVariant.Color,
+                        Size = newVariant.Size,
+                        StockQuantity = newVariant.StockQuantity
+                    });
+                }
+            }
+
+            // Remove only variants that don't have orders and aren't being updated
+            var finalVariantsToRemove = variantsToRemove
+                .Where(v => !variantsToUpdate.Contains(v))
+                .ToList();
+
+            _context.ProductVariants.RemoveRange(finalVariantsToRemove);
+            _context.ProductVariants.AddRange(variantsToAdd);
+
+            // Log warning for variants with orders that couldn't be modified
+            var preservedVariantsCount = variantsWithOrders.Count;
+            if (preservedVariantsCount > 0)
+            {
+                _logger.LogWarning($"Preserved {preservedVariantsCount} variants with existing orders for product {product.Id}");
+            }
+        }
+
 
         [HttpDelete("Delete/{id}")]
         public async Task<ActionResult> Delete(int id)
         {
             var product = await _context.Products
                 .Include(p => p.Variants)
+                    .ThenInclude(v => v.OrderItems)
                 .Include(p => p.Images)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null) return NotFound();
+
+            var variantsWithOrders = product.Variants
+                .Where(v => v.OrderItems.Any())
+                .ToList();
+
+            if (variantsWithOrders.Any())
+            {
+                var totalOrders = variantsWithOrders.Sum(v => v.OrderItems.Count);
+
+                
+                product.IsActive = false;
+
+               
+
+
+                await _context.SaveChangesAsync();
+
+                return BadRequest($"Product deactivated due to {totalOrders} existing orders associated with it");
+            }
 
             _context.ProductVariants.RemoveRange(product.Variants);
             _context.ProductImages.RemoveRange(product.Images);
@@ -332,10 +419,10 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
             await _context.SaveChangesAsync();
 
-            return Ok();
+            return Ok("Product deleted successfully");
         }
 
-        
+
     }
 
 

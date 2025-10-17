@@ -8,7 +8,7 @@
         public bool IsActive { get; set; }
         public int SubCategoryId { get; set; }
         public string Gender { get; set; } = "Unisex";
-        public List<IFormFile> Images { get; set; }
+        public List<IFormFile>? Images { get; set; }
 
     }
 

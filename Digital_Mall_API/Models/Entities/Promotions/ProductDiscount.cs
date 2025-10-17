@@ -21,12 +21,13 @@ namespace Digital_Mall_API.Models.Entities.Promotions
         [StringLength(50)]
         public string Status { get; set; } = "Active"; 
 
-
+        public string BrandId { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
         public virtual List<Product> Products { get; set; } = new List<Product>();
+        public virtual Brand Brand { get; set; }
     }
 
    

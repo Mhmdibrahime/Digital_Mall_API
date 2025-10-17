@@ -43,7 +43,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             var totalRevenue = await _context.OrderItems
                 .Where(oi =>
                     oi.BrandId == brandId &&
-                    (oi.Order.Status == "Deliverd" || oi.Order.Status == "Partially Refunded") &&
+                    (oi.Order.Status == "Delivered" || oi.Order.Status == "Partially Refunded") &&
                     oi.Order.PaymentStatus == "Paid" &&
                     !oi.IsRefunded)
                 .SumAsync(oi => oi.Quantity * oi.PriceAtTimeOfPurchase);
@@ -52,7 +52,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 .Include(oi => oi.Order)
                 .Where(oi =>
                     oi.BrandId == brandId &&
-                    (oi.Order.Status == "Deliverd" || oi.Order.Status == "Partially Refunded") &&
+                    (oi.Order.Status == "Delivered" || oi.Order.Status == "Partially Refunded") &&
                     oi.Order.PaymentStatus == "Paid" &&
                     !oi.IsRefunded)
                 .ToListAsync();

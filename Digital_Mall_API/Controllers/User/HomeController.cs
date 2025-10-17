@@ -40,7 +40,7 @@ namespace Digital_Mall_API.Controllers.User
                 .AsNoTracking()
                
                 .Where(oi => oi.BrandId != null &&
-                             (oi.Order.Status == "Completed" || oi.Order.Status == "Deliverd") &&
+                             (oi.Order.Status == "Completed" || oi.Order.Status == "Delivered") &&
                              oi.Order.PaymentStatus == "Paid")
                 .GroupBy(oi => new
                 {

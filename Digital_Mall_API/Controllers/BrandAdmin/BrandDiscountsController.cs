@@ -4,6 +4,7 @@ using Digital_Mall_API.Models.Entities.Promotions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Digital_Mall_API.Controllers.BrandAdmin
 {
@@ -21,15 +22,14 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpGet("summary")]
         public async Task<ActionResult<DiscountSummaryDto>> GetDiscountSummary()
         {
-            var totalDiscounts = await _context.Discounts.CountAsync();
-            var activeDiscounts = await _context.Discounts
-                .Where(d => d.Status == "Active" )
+            var totalDiscounts = await _context.ProductDiscounts.CountAsync();
+            var activeDiscounts = await _context.ProductDiscounts
+                .Where(d => d.Status == "Active")
                 .CountAsync();
-            var inactiveDiscounts = await _context.Discounts
-                .Where(d => d.Status == "Inactive" )
+            var inactiveDiscounts = await _context.ProductDiscounts
+                .Where(d => d.Status == "Inactive")
                 .CountAsync();
             var promoCodes = await _context.PromoCodes
-                
                 .CountAsync();
 
             return new DiscountSummaryDto
@@ -44,21 +44,30 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpGet("GetDiscounts")]
         public async Task<ActionResult<IEnumerable<DiscountDto>>> GetDiscounts(
             [FromQuery] string? status = null,
-
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
-            var query = _context.ProductDiscounts
+            var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (brandId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands
+                .FirstOrDefaultAsync(b => b.Id == brandId);
+            if (brand == null)
+            {
+                return NotFound("Brand not found.");
+            }
+                var query = _context.ProductDiscounts
                 .Include(d => d.Products)
                     .ThenInclude(p => p.Brand)
+                    .Where(d => d.BrandId == brandId)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(status) && status != "All")
             {
                 query = query.Where(d => d.Status == status);
             }
-
-            
 
             var totalCount = await query.CountAsync();
 
@@ -69,10 +78,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 .Select(d => new DiscountDto
                 {
                     Id = d.Id,
-                  
                     DiscountValue = d.DiscountValue,
                     Status = d.Status,
-                 
                     CreatedAt = d.CreatedAt,
                     UpdatedAt = d.UpdatedAt,
                     Products = d.Products.Select(p => new ProductDto
@@ -99,6 +106,17 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpGet("GetDiscount/{id}")]
         public async Task<ActionResult<DiscountDto>> GetDiscount(int id)
         {
+            var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (brandId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands
+                .FirstOrDefaultAsync(b => b.Id == brandId);
+            if (brand == null)
+            {
+                return NotFound("Brand not found.");
+            }
             var discount = await _context.ProductDiscounts
                 .Include(d => d.Products)
                     .ThenInclude(p => p.Brand)
@@ -114,7 +132,6 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 Id = discount.Id,
                 DiscountValue = discount.DiscountValue,
                 Status = discount.Status,
-               
                 CreatedAt = discount.CreatedAt,
                 UpdatedAt = discount.UpdatedAt,
                 Products = discount.Products.Select(p => new ProductDto
@@ -133,16 +150,23 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpPost("CreateDiscount")]
         public async Task<ActionResult<DiscountDto>> CreateDiscount(CreateDiscountDto createDiscountDto)
         {
-           
-        
-
+            var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (brandId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands
+                .FirstOrDefaultAsync(b => b.Id == brandId);
+            if (brand == null)
+            {
+                return NotFound("Brand not found.");
+            }
             var discount = new ProductDiscount
             {
-              
-               
                 DiscountValue = createDiscountDto.DiscountValue,
-               
-                Status = createDiscountDto.Status
+                Status = createDiscountDto.Status,
+                BrandId = brandId,
+
             };
 
             _context.ProductDiscounts.Add(discount);
@@ -159,6 +183,17 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateDiscount(int id, UpdateDiscountDto updateDiscountDto)
         {
+            var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (brandId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands
+                .FirstOrDefaultAsync(b => b.Id == brandId);
+            if (brand == null)
+            {
+                return NotFound("Brand not found.");
+            }
             var discount = await _context.ProductDiscounts
                 .Include(d => d.Products)
                 .FirstOrDefaultAsync(d => d.Id == id);
@@ -168,13 +203,9 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 return NotFound();
             }
 
-            
-
-
             if (updateDiscountDto.DiscountValue.HasValue)
                 discount.DiscountValue = updateDiscountDto.DiscountValue.Value;
 
-          
             if (!string.IsNullOrEmpty(updateDiscountDto.Status))
                 discount.Status = updateDiscountDto.Status;
 
@@ -204,6 +235,17 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDiscount(int id)
         {
+            var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (brandId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands
+                .FirstOrDefaultAsync(b => b.Id == brandId);
+            if (brand == null)
+            {
+                return NotFound("Brand not found.");
+            }
             var discount = await _context.ProductDiscounts
                 .Include(d => d.Products)
                 .FirstOrDefaultAsync(d => d.Id == id);
@@ -224,39 +266,9 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             return NoContent();
         }
 
-        //[HttpPost("{id}/products")]
-        //public async Task<IActionResult> AddProductsToDiscount(int id, [FromBody] List<int> productIds)
-        //{
-        //    var discount = await _context.Discounts.FindAsync(id);
-        //    if (discount == null)
-        //    {
-        //        return NotFound("Discount not found");
-        //    }
-
-        //    await AddProductsToDiscount(id, productIds);
-        //    return Ok();
-        //}
-
-        //[HttpDelete("{id}/products/{productId}")]
-        //public async Task<IActionResult> RemoveProductFromDiscount(int id, int productId)
-        //{
-        //    var product = await _context.Products
-        //        .FirstOrDefaultAsync(p => p.Id == productId && p.DiscountId == id);
-
-        //    if (product == null)
-        //    {
-        //        return NotFound("Product not found in this discount");
-        //    }
-
-        //    product.DiscountId = null;
-        //    await _context.SaveChangesAsync();
-
-        //    return NoContent();
-        //}
-
         private bool DiscountExists(int id)
         {
-            return _context.Discounts.Any(e => e.Id == id);
+            return _context.ProductDiscounts.Any(e => e.Id == id);
         }
 
         private async Task AddProductsToDiscount(int discountId, List<int> productIds)
@@ -290,12 +302,9 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             }
         }
 
-        private decimal CalculateDiscountedPrice(decimal originalPrice, decimal discountValue)
+        private static decimal CalculateDiscountedPrice(decimal originalPrice, decimal discountValue)
         {
             return originalPrice * (1 - discountValue / 100);
-               
         }
-      
-       
     }
 }
