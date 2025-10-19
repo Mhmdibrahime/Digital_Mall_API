@@ -1,15 +1,18 @@
 ﻿using Digital_Mall_API.Models.Data;
+using Digital_Mall_API.Models.DTOs.BrandAdminDTOs.SettingsDTOs;
 using Digital_Mall_API.Models.Entities.User___Authentication;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
-using Digital_Mall_API.Models.DTOs.BrandAdminDTOs.SettingsDTOs;
 using System.IO;
+using System.Security.Claims;
 namespace Digital_Mall_API.Controllers.BrandAdmin
 {
     [Route("Brand/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Brand")]
+
     public class SettingsController : ControllerBase
     {
         private readonly AppDbContext _context;

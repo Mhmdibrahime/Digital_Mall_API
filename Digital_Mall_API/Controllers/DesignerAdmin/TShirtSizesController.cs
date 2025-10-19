@@ -1,12 +1,15 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.DTOs.DesignerAdminDTOs;
 using Digital_Mall_API.Models.Entities.T_Shirt_Customization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Digital_Mall_API.Controllers.DesignerAdmin
 {
     [Route("Designer/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Designer")]
+
     public class TShirtSizesController : ControllerBase
     {
         private readonly AppDbContext _context;

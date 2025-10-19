@@ -2,6 +2,7 @@
 using Digital_Mall_API.Models.DTOs.BrandAdminDTOs.WidgetsDTOs;
 using Digital_Mall_API.Models.Entities.Product_Catalog;
 using Digital_Mall_API.Models.Entities.Promotions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -10,6 +11,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 {
     [Route("Brand/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Brand")]
+
     public class WidgetsController : ControllerBase
     {
         private readonly AppDbContext _context;

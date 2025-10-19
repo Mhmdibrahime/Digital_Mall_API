@@ -3,6 +3,7 @@ using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.ModelsManagementDTOs;
 using Digital_Mall_API.Models.Entities.Financials;
 using Digital_Mall_API.Models.Entities.Reels___Content;
 using Digital_Mall_API.Models.Entities.User___Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 {
     [Route("Super/Management/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
+
     public class ModelsManagementController : ControllerBase
     {
         private readonly AppDbContext _context;

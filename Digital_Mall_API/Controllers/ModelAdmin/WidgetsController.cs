@@ -1,5 +1,6 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.Entities.Financials;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,8 @@ namespace Digital_Mall_API.Controllers.Model
 {
     [Route("Model/[controller]")]
     [ApiController]
+    [Authorize(Roles = "FashionModel")]
+
     public class WidgetsController : ControllerBase
     {
         private readonly AppDbContext _context;

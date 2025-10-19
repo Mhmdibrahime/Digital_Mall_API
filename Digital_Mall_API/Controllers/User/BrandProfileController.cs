@@ -35,7 +35,7 @@ namespace Digital_Mall_API.Controllers.User
             var brand = await _context.Brands
                 .FirstOrDefaultAsync(b => b.Id == brandId);
 
-            if (brand == null)
+            if (brand == null || brand.Status != "Active")
                 return NotFound(new { message = "Brand not found" });
 
             var followersCount = await _context.FollowingBrands
@@ -96,6 +96,7 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.Images)
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Brand)
+                .Where(p => p.Variants.Any(v => v.StockQuantity > 0) && p.IsActive && p.Brand.Status == "Active")
                 .AsQueryable();
 
             var totalCount = await query.CountAsync();

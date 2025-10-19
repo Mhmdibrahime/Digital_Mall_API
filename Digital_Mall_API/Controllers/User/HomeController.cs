@@ -72,6 +72,7 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.Images)
                 .Where(p => p.ProductDiscount != null &&
                             p.ProductDiscount.Status == "Active" &&
+                            p.Brand.Status == "Active" &&
                             p.IsActive)
                 .OrderByDescending(p => p.ProductDiscount.DiscountValue)
                 .Take(12)
@@ -104,7 +105,8 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(oi => oi.ProductVariant.Product.Variants)
                 .Where(oi => oi.ProductVariant != null &&
                              oi.ProductVariant.Product != null &&
-                             oi.ProductVariant.Product.IsActive)
+                             oi.ProductVariant.Product.IsActive &&
+                             oi.ProductVariant.Product.Brand.Status == "Active")
                 .AsEnumerable() 
                 .GroupBy(oi => oi.ProductVariant.Product)
                 .Select(g => new
@@ -142,7 +144,7 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.Images)
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Variants)
-                .Where(p => p.IsActive && p.IsTrend)
+                .Where(p => p.IsActive && p.IsTrend && p.Brand.Status == "Active")
                 .OrderByDescending(p => p.CreatedAt)
                 .Take(12)
                 .Select(p => new DiscountedProductDto

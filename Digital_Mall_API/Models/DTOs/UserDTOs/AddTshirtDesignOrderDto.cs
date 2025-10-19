@@ -16,6 +16,7 @@
         public IFormFile TshirtLeftImage { get; set; }
         public IFormFile TshirtRightImage { get; set; }
 
+        public decimal TotalPrice { get; set; }
         // صور الديزاين كملفات متعددة
         public List<IFormFile> CustomerImages { get; set; } = new List<IFormFile>();
 

@@ -1,5 +1,6 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.OrdersManagementDTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -8,6 +9,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 {
     [Route("Brand/Management/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Brand")]
+
     public class BrandOrdersController : ControllerBase
     {
         private readonly AppDbContext _context;

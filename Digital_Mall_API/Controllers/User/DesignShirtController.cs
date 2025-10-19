@@ -31,6 +31,7 @@ namespace Digital_Mall_API.Controllers.User
                 {
                     Id = t.Id,
                     Name = t.Name,
+                    Price = t.Price,
                     SizeChartUrl = t.SizeChartUrl,
                     FrontImageUrl = t.FrontImageUrl,
                     BackImageUrl = t.BackImageUrl,
@@ -51,6 +52,7 @@ namespace Digital_Mall_API.Controllers.User
                 {
                     Id = t.Id,
                     Name = t.Name,
+                    Price = t.Price,
                     SizeChartUrl = t.SizeChartUrl,
                     FrontImageUrl = t.FrontImageUrl,
                     BackImageUrl = t.BackImageUrl,
@@ -141,7 +143,7 @@ namespace Digital_Mall_API.Controllers.User
                     Weight = dto.Weight <= 0 ? 1 : dto.Weight,
                     Status = "Pending",
                     IsPaid = false,
-
+                    FinalPrice = dto.TotalPrice < 0 ? 0 : dto.TotalPrice,
                     TshirtFrontImage = SaveFile(dto.TshirtFrontImage, "tshirts") ?? "/uploads/tshirts/default_front.png",
                     TshirtBackImage = SaveFile(dto.TshirtBackImage, "tshirts") ?? "/uploads/tshirts/default_back.png",
                     TshirtLeftImage = SaveFile(dto.TshirtLeftImage, "tshirts") ?? "/uploads/tshirts/default_left.png",

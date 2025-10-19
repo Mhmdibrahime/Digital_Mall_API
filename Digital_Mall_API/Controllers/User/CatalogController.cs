@@ -49,7 +49,7 @@ namespace Digital_Mall_API.Controllers.User
                     .Include(p => p.ProductDiscount)
                     .Include(p => p.Images)
                     .Include(p => p.Variants)
-                    .Where(p => p.IsActive &&
+                    .Where(p => p.IsActive && p.Brand.Status == "Active" &&
                                (p.Name.ToLower().Contains(searchTerm) ||
                                 p.Description.ToLower().Contains(searchTerm) ||
                                 p.Brand.OfficialName.ToLower().Contains(searchTerm) ||
@@ -212,6 +212,7 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
+                .Where(p => p.IsActive && p.Brand.Status == "Active")
                 .AsQueryable();
 
             // ✅ filter by category
@@ -339,7 +340,7 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
-                .Where(p => subCategoryIds.Contains(p.SubCategoryId))
+                .Where(p => subCategoryIds.Contains(p.SubCategoryId) && p.IsActive && p.Brand.Status == "Active" )
                 .AsQueryable();
 
             // ✅ apply filters
@@ -432,7 +433,7 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
-                .Where(p => p.SubCategoryId == subCategoryId)
+                .Where(p => p.SubCategoryId == subCategoryId && p.IsActive && p.Brand.Status == "Active" )
                 .AsQueryable();
 
             // ✅ filters

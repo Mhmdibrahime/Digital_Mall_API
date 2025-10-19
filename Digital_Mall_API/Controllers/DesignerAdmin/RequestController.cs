@@ -3,6 +3,7 @@ using Digital_Mall_API.Models.DTOs.DesignerAdminDTOs;
 using Digital_Mall_API.Models.DTOs.UserDTOs;
 using Digital_Mall_API.Models.Entities.T_Shirt_Customization;
 using Digital_Mall_API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,8 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
 {
     [Route("Designer/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Designer")]
+
     public class RequestController : ControllerBase
     {
         private readonly AppDbContext context;
@@ -194,6 +197,19 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
             {
                 Message = $"Order {id} status updated successfully.",
                 NewStatus = order.Status
+            });
+        }
+        [HttpPatch("{id}/markAsPaid")]
+        public async Task<IActionResult> MarkOrderAsPaid(int id)
+        {
+            var order = await context.TshirtDesignOrders.FindAsync(id);
+            if (order == null) return NotFound();
+            order.IsPaid = true;
+            await context.SaveChangesAsync();
+            return Ok(new
+            {
+                Message = $"Order {id} marked as paid successfully.",
+                IsPaid = order.IsPaid
             });
         }
     }

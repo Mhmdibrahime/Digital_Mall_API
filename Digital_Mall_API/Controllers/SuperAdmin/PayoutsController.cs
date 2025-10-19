@@ -2,6 +2,7 @@
 using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.PayoutsDTOs;
 using Digital_Mall_API.Models.Entities.Financials;
 using Digital_Mall_API.Models.Entities.User___Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 {
     [Route("Super/Financial/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
+
     public class PayoutsController : ControllerBase
     {
         private readonly AppDbContext _context;

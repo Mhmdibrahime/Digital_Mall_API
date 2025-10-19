@@ -1,6 +1,7 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.Entities.Product_Catalog;
 using Digital_Mall_API.Models.Entities.User___Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ namespace Digital_Mall_API.Controllers.User
 {
     [Route("User/[controller]")]
     [ApiController]
+    [Authorize]
     public class FavoritesController : ControllerBase
     {
         private readonly AppDbContext _context;

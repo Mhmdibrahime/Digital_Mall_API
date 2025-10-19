@@ -36,7 +36,7 @@ namespace Digital_Mall_API.Controllers.Reels
                 }
 
                 var baseQuery = _context.Reels
-                    .Where(r => r.UploadStatus == "ready")
+                    .Where(r => r.UploadStatus == "ready" && (r.PostedByBrand.Status == "Active" || r.PostedByModel.Status == "Active"))
                     .Include(r => r.PostedByModel)
                     .Include(r => r.PostedByBrand)
                     .Include(r => r.LinkedProducts)
@@ -113,7 +113,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     .ToListAsync();
 
                 var followingReels = await _context.Reels
-                    .Where(r => r.UploadStatus == "ready" &&
+                    .Where(r => r.UploadStatus == "ready" && (r.PostedByModel.Status == "Active" || r.PostedByBrand.Status == "Active") &&
                                ((r.PostedByUserType == "Brand" && followedBrands.Contains(r.PostedByUserId)) ||
                                 (r.PostedByUserType == "FashionModel" && followedModels.Contains(r.PostedByUserId))))
                     .Include(r => r.PostedByModel)

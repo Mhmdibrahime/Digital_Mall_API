@@ -13,6 +13,7 @@ namespace Digital_Mall_API.Controllers.Reels
 {
     [ApiController]
     [Route("api/reels")]
+    [Authorize]
     public class ReelManagementController : ControllerBase
     {
         private readonly AppDbContext _context;

@@ -2,12 +2,15 @@
 using Digital_Mall_API.Models.DTOs.DesignerAdminDTOs;
 using Digital_Mall_API.Models.Entities.T_Shirt_Customization;
 using Digital_Mall_API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Digital_Mall_API.Controllers.DesignerAdmin
 {
     [Route("Designer/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Designer")]
+
     public class TshirtTemplatesController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -28,6 +31,7 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
                 {
                     Id = t.Id,
                     Name = t.Name,
+                    Price = t.Price,
                     SizeChartUrl = t.SizeChartUrl,
                     FrontImageUrl = t.FrontImageUrl,
                     BackImageUrl = t.BackImageUrl,
@@ -46,6 +50,7 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
             var template = new TshirtTemplate
             {
                 Name = dto.Name,
+                Price = dto.Price,
                 SizeChartUrl = dto.SizeChart != null ? await _fileService.SaveFileAsync(dto.SizeChart, "templates") : null,
                 FrontImageUrl = dto.FrontImage != null ? await _fileService.SaveFileAsync(dto.FrontImage, "templates") : null,
                 BackImageUrl = dto.BackImage != null ? await _fileService.SaveFileAsync(dto.BackImage, "templates") : null,
@@ -68,6 +73,7 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
                 return NotFound();
 
             template.Name = dto.Name;
+            template.Price = dto.Price;
 
             if (dto.SizeChart != null)
                 template.SizeChartUrl = await _fileService.SaveFileAsync(dto.SizeChart, "templates");

@@ -13,7 +13,7 @@
     public class TshirtTemplateDto
     {
         public string Name { get; set; }
-
+        public decimal Price { get; set; }
         public IFormFile? SizeChart { get; set; }
         public IFormFile? FrontImage { get; set; }
         public IFormFile? BackImage { get; set; }
@@ -25,6 +25,7 @@
     {
         public int Id { get; set; }
         public string Name { get; set; }
+        public decimal Price { get; set; }
 
         public string? SizeChartUrl { get; set; }
         public string? FrontImageUrl { get; set; }

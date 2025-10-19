@@ -3,6 +3,7 @@ using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.RefundDTOs;
 using Digital_Mall_API.Models.DTOs.UserDTOs.ProfileDTOs;
 using Digital_Mall_API.Models.Entities.Orders___Shopping;
 using Digital_Mall_API.Models.Entities.User___Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ namespace Digital_Mall_API.Controllers
 {
     [ApiController]
     [Route("User/[controller]")]
+    [Authorize]
     public class ProfileController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -28,6 +30,24 @@ namespace Digital_Mall_API.Controllers
             _environment = environment;
         }
 
+        [HttpGet("balance")]
+        public async Task<IActionResult> GetCurrentCustomerBalance()
+        {
+            var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(customerId))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+           
+                var balance = await _context.Customers
+                .Where(c => c.Id == customerId)
+                .Select(c => c.WalletBalance)
+                .FirstOrDefaultAsync();
+
+            return Ok(new { Balance = balance });
+        }
         [HttpGet("GetProfileInfo")]
         public async Task<ActionResult<ProfileDto>> GetProfile()
         {

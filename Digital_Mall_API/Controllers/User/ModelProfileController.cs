@@ -34,7 +34,7 @@ namespace Digital_Mall_API.Controllers.User
             var model = await _context.FashionModels
                 .FirstOrDefaultAsync(m => m.Id == modelId);
 
-            if (model == null)
+            if (model == null || model.Status!="Active")
                 return NotFound(new { message = "Model not found" });
 
             var followersCount = await _context.FollowingModels
@@ -83,7 +83,7 @@ namespace Digital_Mall_API.Controllers.User
             [FromQuery] int pageSize = 8)
         {
             var model = await _context.FashionModels.FindAsync(modelId);
-            if (model == null)
+            if (model == null || model.Status != "Active")
                 return NotFound(new { message = "Model not found" });
 
             var query = _context.Reels

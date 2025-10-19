@@ -11,6 +11,7 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
 {
     [Route("Designer/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Designer")]
     public class DesignerProfileController : ControllerBase
     {
         private readonly AppDbContext context;

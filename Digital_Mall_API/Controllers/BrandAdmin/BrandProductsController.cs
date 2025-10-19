@@ -1,6 +1,7 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.DTOs.BrandAdminDTOs;
 using Digital_Mall_API.Models.Entities.Product_Catalog;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 {
     [ApiController]
     [Route("Brand/Management/[controller]")]
+    [Authorize(Roles = "Brand")]
+
     public class BrandProductsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -390,31 +393,51 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 .Include(p => p.Variants)
                     .ThenInclude(v => v.OrderItems)
                 .Include(p => p.Images)
+                .Include(p => p.ReelProducts) // Include ReelProducts
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null) return NotFound();
 
-            var variantsWithOrders = product.Variants
-                .Where(v => v.OrderItems.Any())
-                .ToList();
+            // Check if product has any orders through its variants
+            var hasOrders = product.Variants?.Any(v => v.OrderItems?.Any() == true) == true;
 
-            if (variantsWithOrders.Any())
+            // Check if product has any reels
+            var hasReels = product.ReelProducts?.Any() == true;
+
+            // If product has orders OR reels, deactivate it instead of deleting
+            if (hasOrders || hasReels)
             {
-                var totalOrders = variantsWithOrders.Sum(v => v.OrderItems.Count);
+                var messageParts = new List<string>();
 
-                
+                if (hasOrders)
+                {
+                    var totalOrders = product.Variants.Sum(v => v.OrderItems?.Count ?? 0);
+                    messageParts.Add($"{totalOrders} orders");
+                }
+
+                if (hasReels)
+                {
+                    var reelCount = product.ReelProducts.Count;
+                    messageParts.Add($"{reelCount} reels");
+                }
+
                 product.IsActive = false;
-
-               
-
-
                 await _context.SaveChangesAsync();
 
-                return BadRequest($"Product deactivated due to {totalOrders} existing orders associated with it");
+                var message = $"Product deactivated because it has {string.Join(" and ", messageParts)} associated with it";
+                return BadRequest(message);
             }
 
+            // If no orders and no reels, delete completely
             _context.ProductVariants.RemoveRange(product.Variants);
             _context.ProductImages.RemoveRange(product.Images);
+
+            // Remove ReelProducts (should be empty but good practice)
+            if (product.ReelProducts?.Any() == true)
+            {
+                _context.ReelProducts.RemoveRange(product.ReelProducts);
+            }
+
             _context.Products.Remove(product);
 
             await _context.SaveChangesAsync();

@@ -1,13 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Digital_Mall_API.Models.Data;
+using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.Entities.PlatformSettings;
-using Digital_Mall_API.Models.Data;
-using Digital_Mall_API.Models.Data;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Digital_Mall_API.Controllers
 {
     [ApiController]
     [Route("Super/[controller]")]
+    [Authorize(Roles = "Admin")]
+
     public class PlatformSettingsController : ControllerBase
     {
         private readonly AppDbContext _context;

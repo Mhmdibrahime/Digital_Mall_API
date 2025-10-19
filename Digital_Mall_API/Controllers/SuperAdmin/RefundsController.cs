@@ -1,7 +1,8 @@
 ﻿using Digital_Mall_API.Models.Data;
-using Digital_Mall_API.Models.Entities;
 using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.RefundDTOs;
+using Digital_Mall_API.Models.Entities;
 using Digital_Mall_API.Models.Entities.Orders___Shopping;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 {
     [ApiController]
     [Route("Super/[controller]")]
+    [Authorize(Roles = "Admin")]
+
     public class RefundsController : ControllerBase
     {
         private readonly AppDbContext _context;

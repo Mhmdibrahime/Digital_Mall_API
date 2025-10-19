@@ -1,4 +1,5 @@
 ﻿using Digital_Mall_API.Models.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ namespace Digital_Mall_API.Controllers.ModelAdmin
 {
     [ApiController]
     [Route("Model/[controller]")]
+    [Authorize(Roles = "FashionModel")]
     public class EarningsController : ControllerBase
     {
         private readonly AppDbContext _context;

@@ -1,16 +1,19 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.Entities.User___Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
 
 namespace Digital_Mall_API.Controllers.Model
 {
     [Route("Model/[controller]")]
     [ApiController]
+    [Authorize(Roles = "FashionModel")]
+
     public class SettingsController : ControllerBase
     {
         private readonly AppDbContext _context;

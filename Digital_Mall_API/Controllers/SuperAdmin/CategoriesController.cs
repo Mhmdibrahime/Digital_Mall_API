@@ -1,15 +1,18 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Digital_Mall_API.Models.Data;
+using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.CategoriesManagementDTOs;
+using Digital_Mall_API.Models.Entities.Product_Catalog;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Digital_Mall_API.Models.Data;
-using Digital_Mall_API.Models.Entities.Product_Catalog;
 using System.ComponentModel.DataAnnotations;
-using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.CategoriesManagementDTOs;
 
 namespace Digital_Mall_API.Controllers.SuperAdmin
 {
     [Route("Super/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
+
     public class CategoriesController : ControllerBase
     {
         private readonly AppDbContext _context;

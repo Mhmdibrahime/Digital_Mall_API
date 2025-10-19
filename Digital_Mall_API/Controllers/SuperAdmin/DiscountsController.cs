@@ -1,6 +1,7 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.DiscountsDTOs;
 using Digital_Mall_API.Models.Entities.Promotions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 {
     [Route("Super/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
+
     public class DiscountsController : ControllerBase
     {
         private readonly AppDbContext _context;

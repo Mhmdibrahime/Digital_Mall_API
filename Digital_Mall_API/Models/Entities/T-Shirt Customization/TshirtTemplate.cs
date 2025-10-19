@@ -4,7 +4,7 @@
     {
         public int Id { get; set; }
         public string Name { get; set; }
-
+        public decimal Price { get; set; }
         public string? SizeChartUrl { get; set; }
         public string? FrontImageUrl { get; set; }
         public string? BackImageUrl { get; set; }
