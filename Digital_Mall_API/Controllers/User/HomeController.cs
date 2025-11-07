@@ -1,5 +1,6 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.DTOs.UserDTOs;
+using Digital_Mall_API.Models.Entities.Promotions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,15 @@ namespace Digital_Mall_API.Controllers.User
         public HomeController(AppDbContext context)
         {
             this.context = context;
+        }
+        [HttpGet("activeDiscounts")]
+        public async Task<ActionResult<IEnumerable<Discount>>> GetActiveDiscounts()
+        {
+            var activeDiscounts = await context.Discounts
+                .Where(d => d.Status == "Active")
+                .ToListAsync();
+
+            return Ok(activeDiscounts);
         }
         [HttpGet("Categoies")]
         public async Task<IActionResult> GetCategoriesSimple()

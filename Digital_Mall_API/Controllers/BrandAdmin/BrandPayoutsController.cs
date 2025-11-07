@@ -241,6 +241,10 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             }
 
             var earnings = await GetFinancialEarnings();
+            if (earnings.Value == null)
+            {
+                return BadRequest("Unable to retrieve financial earnings,Make your brand has paid orders.");
+            }
             if (createPayoutDto.Amount > earnings.Value.AvailableForPayout)
             {
                 return BadRequest($"Insufficient funds. Available for payout: {earnings.Value.AvailableForPayout:C}");

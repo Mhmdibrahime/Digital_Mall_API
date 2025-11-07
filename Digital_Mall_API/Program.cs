@@ -112,7 +112,7 @@ namespace Digital_Mall_API
                 {
                     Version = "v1",
                     Title = "Digital Mall API",
-                    Description = "ITI Project - Digital Mall Web API"
+                    Description = "Digital Mall Web API"
                 });
 
                 var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";

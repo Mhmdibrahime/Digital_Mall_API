@@ -20,6 +20,7 @@ namespace Digital_Mall_API.Models.Data
         }
 
         public DbSet<WebhookLog> WebhookLogs { get; set; }
+        public DbSet<Log> Logs { get; set; }
 
         public DbSet<PlatformSettings> PlatformSettings { get; set; }
         public DbSet<Customer> Customers { get; set; }
@@ -39,8 +40,9 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<BrandStatistics> BrandStatistics { get; set; }
         public DbSet<RefundTransaction> RefundTransactions { get; set; }
         public DbSet<Reel> Reels { get; set; }
+        public DbSet<SavedReel> SavedReels { get; set; }
         public DbSet<ReelLike> ReelLikes { get; set; }
-
+        public DbSet<ReelReport> ReelReports { get; set; }
         public DbSet<ReelProduct> ReelProducts { get; set; }
         public DbSet<TshirtDesignOrder> TshirtDesignOrders { get; set; }
         public DbSet<TshirtDesignOrderImage> TshirtDesignOrderImages { get; set; }

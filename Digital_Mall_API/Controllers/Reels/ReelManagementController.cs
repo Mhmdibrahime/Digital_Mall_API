@@ -387,6 +387,7 @@ namespace Digital_Mall_API.Controllers.Reels
             try
             {
                 _context.ReelProducts.RemoveRange(reel.LinkedProducts);
+                
 
                 _context.Reels.Remove(reel);
 

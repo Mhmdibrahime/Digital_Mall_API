@@ -83,7 +83,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     AssignedRequests = _context.TshirtDesignOrders
                         .Count(dr => dr.Status != "Completed"),
                     TotalEarnings = _context.Payouts
-                        .Where(p => p.PayeeUserId.ToString() == x.Designer.Id && p.Status == "Completed")
+                        .Where(p => p.PayeeUserId.ToString() == x.Designer.Id)
                         .Sum(p => (decimal?)p.Amount) ?? 0m
                 })
                 .ToListAsync();

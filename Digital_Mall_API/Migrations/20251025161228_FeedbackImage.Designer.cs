@@ -4,6 +4,7 @@ using Digital_Mall_API.Models.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Digital_Mall_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251025161228_FeedbackImage")]
+    partial class FeedbackImage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -159,55 +162,6 @@ namespace Digital_Mall_API.Migrations
                     b.ToTable("ReelCommissions");
                 });
 
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Logs.Log", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AdditionalData")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("Details")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Level")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OrderId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("PaymobOrderId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("TransactionId")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Logs");
-                });
-
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Logs.WebhookLog", b =>
                 {
                     b.Property<int>("Id")
@@ -307,11 +261,6 @@ namespace Digital_Mall_API.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("PaymobOrderId")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
                     b.Property<string>("ShippingAddress_Building")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -344,11 +293,6 @@ namespace Digital_Mall_API.Migrations
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("TransactionId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -1031,72 +975,6 @@ namespace Digital_Mall_API.Migrations
                     b.ToTable("ReelProducts");
                 });
 
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.ReelReport", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AdditionalDetails")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ReelId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ReportedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReportedByCustomerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReelId");
-
-                    b.HasIndex("ReportedByCustomerId");
-
-                    b.ToTable("ReelReports");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.SavedReel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CustomerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("ReelId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("SavedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("ReelId");
-
-                    b.ToTable("SavedReels");
-                });
-
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TShirtSize", b =>
                 {
                     b.Property<int>("Id")
@@ -1464,11 +1342,6 @@ namespace Digital_Mall_API.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -2213,44 +2086,6 @@ namespace Digital_Mall_API.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
-
-                    b.Navigation("Reel");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.ReelReport", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.Reels___Content.Reel", "Reel")
-                        .WithMany()
-                        .HasForeignKey("ReelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.Customer", "ReportedByCustomer")
-                        .WithMany()
-                        .HasForeignKey("ReportedByCustomerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Reel");
-
-                    b.Navigation("ReportedByCustomer");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.SavedReel", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Digital_Mall_API.Models.Entities.Reels___Content.Reel", "Reel")
-                        .WithMany()
-                        .HasForeignKey("ReelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Customer");
 
                     b.Navigation("Reel");
                 });

@@ -7,7 +7,7 @@ namespace Digital_Mall_API.Models.DTOs.BrandAdminDTOs.BrandPayoutsDTOs
         
 
         [Required]
-        [Range(0.01, double.MaxValue)]
+        [Range(0, double.MaxValue)]
         public decimal Amount { get; set; }
 
         [Required]

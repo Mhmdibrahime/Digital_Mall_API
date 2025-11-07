@@ -177,7 +177,9 @@ namespace Digital_Mall_API.Controllers
                     ShippingTrackingNumber = request.ShippingTrackingNumber ?? _context.Users.FirstOrDefault(x => x.Id.ToString() == customerId)?.PhoneNumber,
                     PaymentStatus = "Pending",
                     Notes = request.Notes,
-                    OrderItems = orderItems
+                    OrderItems = orderItems,
+                    PaymobOrderId = ".",
+                    TransactionId = "."
                 };
 
                 _context.Orders.Add(order);
@@ -195,7 +197,22 @@ namespace Digital_Mall_API.Controllers
                 }
                 else if (request.PaymentMethod.ToLower() == "paymob")
                 {
-                    return await ProcessPaymobPayment(order);
+                    return await ProcessPaymobPayment(order, customerId);
+                }
+                else if (request.PaymentMethod.ToLower() == "cod")
+                {
+                    order.PaymentStatus = "Pending";
+                    order.Status = "Pending";
+
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new CheckoutResponseDto
+                    {
+                        Success = true,
+                        Message = "Order placed successfully with Cash on Delivery",
+                        OrderId = order.Id,
+                        TotalAmount = order.TotalAmount
+                    });
                 }
                 else
                 {
@@ -439,11 +456,11 @@ namespace Digital_Mall_API.Controllers
             });
         }
 
-        private async Task<ActionResult<CheckoutResponseDto>> ProcessPaymobPayment(Order order)
+        private async Task<ActionResult<CheckoutResponseDto>> ProcessPaymobPayment(Order order,string customerId)
         {
             try
             {
-                var paymentResult = await _paymobService.InitializePayment(order);
+                var paymentResult = await _paymobService.InitializePayment(order,customerId);
 
                 if (paymentResult.Success)
                 {
@@ -485,46 +502,581 @@ namespace Digital_Mall_API.Controllers
         }
 
         [HttpPost("paymob/callback")]
-        public async Task<ActionResult<PaymentResultDto>> PaymobCallback([FromBody] PaymobCallbackDto callbackData)
+        [HttpGet("paymob/callback")] // Add GET support for query parameters
+        public async Task<ActionResult> PaymobCallback(
+    [FromBody] PaymobCallbackDto? callbackData = null,
+    [FromQuery] string? id = null,
+    [FromQuery] string? pending = null,
+    [FromQuery] long? amount_cents = null,
+    [FromQuery] bool? success = null,
+    [FromQuery] string? order = null,
+    [FromQuery] string? currency = null,
+    [FromQuery] bool? error_occured = null,
+    [FromQuery] string? data_message = null)
         {
             try
             {
-                var result = await _paymobService.HandleCallback(callbackData);
+                PaymobCallbackDto processedCallbackData;
+
+                // Handle query parameters (automatic callback from Paymob)
+                if (callbackData == null && !string.IsNullOrEmpty(id))
+                {
+                    await _paymobService.LogToDatabase("Information", "CheckoutController",
+                        "Processing callback from QUERY PARAMETERS",
+                        $"Order: {order}, Success: {success}", null, order, id);
+
+                    processedCallbackData = new PaymobCallbackDto
+                    {
+                        id = long.TryParse(id, out var tid) ? tid : 0,
+                        pending = bool.TryParse(pending, out var p) && p,
+                        amount_cents = amount_cents ?? 0,
+                        success = success ?? false,
+                        order = order ?? string.Empty,
+                        currency = currency ?? "EGP",
+                        error_occured = error_occured ?? false,
+                        data = new PaymobCallbackData
+                        {
+                            message = data_message ?? string.Empty
+                        }
+                    };
+                }
+                // Handle JSON body (manual testing)
+                else if (callbackData != null)
+                {
+                    await _paymobService.LogToDatabase("Information", "CheckoutController",
+                        "Processing callback from JSON BODY",
+                        $"Order: {callbackData.order}, Success: {callbackData.success}",
+                        null, callbackData.order, callbackData.id.ToString());
+
+                    processedCallbackData = callbackData;
+                }
+                else
+                {
+                    await _paymobService.LogToDatabase("Warning", "CheckoutController",
+                        "Invalid callback - no data provided", null);
+
+                    return BadRequest(new PaymentResultDto
+                    {
+                        Success = false,
+                        Message = "No callback data provided"
+                    });
+                }
+
+                _logger.LogInformation("🔄 Paymob Callback Received - Success: {Success}, Paymob Order: {Order}",
+                    processedCallbackData.success, processedCallbackData.order);
+
+                var result = await _paymobService.HandleCallback(processedCallbackData);
 
                 if (result.Success)
                 {
-                    var order = await _context.Orders
+                    var dbOrder = await _context.Orders
                         .Include(o => o.OrderItems)
-                        .FirstOrDefaultAsync(o => o.Id == result.OrderId);
+                        .FirstOrDefaultAsync(o => o.PaymobOrderId == processedCallbackData.order);
 
-                    if (order != null)
+                    if (dbOrder != null)
                     {
-                        order.PaymentStatus = "Paid";
+                        await _paymobService.LogToDatabase("Information", "CheckoutController",
+                            "Found order in database",
+                            $"DB Order: {dbOrder.Id}, Paymob Order: {dbOrder.PaymobOrderId}",
+                            dbOrder.Id.ToString(), dbOrder.PaymobOrderId);
 
-                        foreach (var orderItem in order.OrderItems)
+                        // Only update if not already paid
+                        if (dbOrder.PaymentStatus != "Paid")
                         {
-                            var productVariant = await _context.ProductVariants.FindAsync(orderItem.ProductVariantId);
-                            if (productVariant != null)
-                            {
-                                productVariant.StockQuantity -= orderItem.Quantity;
-                            }
-                        }
+                            dbOrder.PaymentStatus = "Paid";
+                            dbOrder.TransactionId = processedCallbackData.id.ToString();
 
-                        await _context.SaveChangesAsync();
+                            // Update stock
+                            foreach (var orderItem in dbOrder.OrderItems)
+                            {
+                                var productVariant = await _context.ProductVariants.FindAsync(orderItem.ProductVariantId);
+                                if (productVariant != null)
+                                {
+                                    var oldQuantity = productVariant.StockQuantity;
+                                    productVariant.StockQuantity -= orderItem.Quantity;
+
+                                    await _paymobService.LogToDatabase("Information", "CheckoutController",
+                                        "Updated stock",
+                                        $"Variant: {orderItem.ProductVariantId}, Old: {oldQuantity}, New: {productVariant.StockQuantity}",
+                                        dbOrder.Id.ToString(), dbOrder.PaymobOrderId);
+                                }
+                            }
+
+                            await _context.SaveChangesAsync();
+
+                            await _paymobService.LogToDatabase("Information", "CheckoutController",
+                                "Order successfully updated to Paid",
+                                $"Order {dbOrder.Id} completed",
+                                dbOrder.Id.ToString(), dbOrder.PaymobOrderId);
+                        }
+                        else
+                        {
+                            await _paymobService.LogToDatabase("Information", "CheckoutController",
+                                "Order already paid - skipping update",
+                                $"Order {dbOrder.Id} was already paid",
+                                dbOrder.Id.ToString(), dbOrder.PaymobOrderId);
+                        }
+                    }
+                    else
+                    {
+                        await _paymobService.LogToDatabase("Warning", "CheckoutController",
+                            "Order not found in database",
+                            $"Paymob Order ID: {processedCallbackData.order}",
+                            null, processedCallbackData.order);
                     }
                 }
+                else
+                {
+                    await _paymobService.LogToDatabase("Warning", "CheckoutController",
+                        "Payment failed in callback",
+                        result.Message, null, processedCallbackData.order);
+                }
 
-                return Ok(result);
+                // Return simple OK response for Paymob
+                return Ok(new { success = true, message = "Paymen processed successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing Paymob callback");
-                return StatusCode(500, new PaymentResultDto
-                {
-                    Success = false,
-                    Message = "Error processing payment callback"
-                });
+                await _paymobService.LogToDatabase("Error", "CheckoutController",
+                    "Error processing callback", ex.Message, null, order);
+
+                return StatusCode(500, new { success = false, message = "Error processing callback" });
             }
+        }
+
+        // NEW: Callback Test UI Endpoint
+        [HttpGet("paymob/callback-test")]
+        public IActionResult CallbackTestUI()
+        {
+            var html = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Paymob Callback Tester</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
+        button:hover { background: #0056b3; }
+        .button-success { background: #28a745; }
+        .button-success:hover { background: #218838; }
+        .button-warning { background: #ffc107; color: #212529; }
+        .button-warning:hover { background: #e0a800; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .logs { margin-top: 20px; }
+        .log-entry { padding: 10px; border-bottom: 1px solid #eee; }
+        .log-info { background: #d1ecf1; }
+        .log-warning { background: #fff3cd; }
+        .log-error { background: #f8d7da; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #e9ecef; border-radius: 5px; }
+        .section h3 { margin-top: 0; color: #495057; }
+        .url-display { background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #e9ecef; word-break: break-all; font-family: monospace; font-size: 12px; }
+        .tab-buttons { display: flex; margin-bottom: 20px; }
+        .tab-button { padding: 10px 20px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer; }
+        .tab-button.active { background: #007bff; color: white; border-color: #007bff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <h1>🔄 Paymob Callback Tester</h1>
+        
+        <div class=""tab-buttons"">
+            <div class=""tab-button active"" onclick=""showTab('manual')"">Manual Testing</div>
+            <div class=""tab-button"" onclick=""showTab('auto')"">Automatic Callback</div>
+            <div class=""tab-button"" onclick=""showTab('status')"">Order Status</div>
+            <div class=""tab-button"" onclick=""showTab('logs')"">Logs</div>
+        </div>
+
+        <!-- Manual Testing Tab -->
+        <div id=""manual"" class=""tab-content active"">
+            <div class=""section"">
+                <h3>📝 Manual Callback Test (JSON Body)</h3>
+                
+                <div class='form-group'>
+                    <label for='paymobOrderId'>Paymob Order ID:</label>
+                    <input type='text' id='paymobOrderId' placeholder='Enter Paymob Order ID' value=""413646773"">
+                </div>
+                
+                <div class='form-group'>
+                    <label for='transactionId'>Transaction ID:</label>
+                    <input type='text' id='transactionId' placeholder='Enter Transaction ID' value=""366427700"">
+                </div>
+                
+                <div class='form-group'>
+                    <label for='amount'>Amount (cents):</label>
+                    <input type='number' id='amount' value='4400'>
+                </div>
+                
+                <div class='form-group'>
+                    <label for='success'>Success:</label>
+                    <select id='success'>
+                        <option value='true'>True (Approved)</option>
+                        <option value='false'>False (Failed)</option>
+                    </select>
+                </div>
+                
+                <button onclick='sendManualCallback()'>Send Manual Callback (JSON)</button>
+                <button class=""button-warning"" onclick='sendFailedCallback()'>Send Failed Callback</button>
+            </div>
+        </div>
+
+        <!-- Automatic Callback Tab -->
+        <div id=""auto"" class=""tab-content"">
+            <div class=""section"">
+                <h3>🔗 Automatic Callback Simulation (Query Parameters)</h3>
+                
+                <div class='form-group'>
+                    <label for='autoPaymobOrderId'>Paymob Order ID:</label>
+                    <input type='text' id='autoPaymobOrderId' placeholder='Enter Paymob Order ID' value=""413646773"">
+                </div>
+                
+                <div class='form-group'>
+                    <label for='autoAmount'>Amount (cents):</label>
+                    <input type='number' id='autoAmount' value='4400'>
+                </div>
+                
+                <button class=""button-success"" onclick='generateAutoCallbackUrl()'>Generate Automatic Callback URL</button>
+                <button class=""button-success"" onclick='testAutoCallback()'>Test Automatic Callback</button>
+                
+                <div class='form-group' style=""margin-top: 20px;"">
+                    <label>Generated URL:</label>
+                    <div id=""generatedUrl"" class=""url-display"">
+                        Click ""Generate Automatic Callback URL"" to see the URL
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Status Tab -->
+        <div id=""status"" class=""tab-content"">
+            <div class=""section"">
+                <h3>📊 Order Status Check</h3>
+                
+                <div class='form-group'>
+                    <label for='statusPaymobOrderId'>Paymob Order ID:</label>
+                    <input type='text' id='statusPaymobOrderId' placeholder='Enter Paymob Order ID' value=""413646773"">
+                </div>
+                
+                <button onclick='checkOrderStatus()'>Check Order Status</button>
+                <button onclick='loadAllOrders()'>Load All Orders</button>
+                
+                <div id=""orderStatusResult"" class=""result"" style=""display:none; margin-top: 20px;""></div>
+                <div id=""allOrdersResult"" class=""result"" style=""display:none; margin-top: 20px;""></div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id=""logs"" class=""tab-content"">
+            <div class=""section"">
+                <h3>📋 Recent Logs</h3>
+                <button onclick='loadLogs()'>Refresh Logs</button>
+                <div id='logsContainer'></div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id='result' class='result' style='display:none;'></div>
+    </div>
+
+    <script>
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Load data for specific tabs
+            if (tabName === 'logs') loadLogs();
+            if (tabName === 'status') loadAllOrders();
+        }
+
+        // Manual Callback Testing (JSON Body)
+        async function sendManualCallback() {
+            const paymobOrderId = document.getElementById('paymobOrderId').value;
+            const transactionId = document.getElementById('transactionId').value;
+            const amount = parseInt(document.getElementById('amount').value);
+            const isSuccess = document.getElementById('success').value === 'true';
+
+            const payload = {
+                id: transactionId,
+                pending: false,
+                amount_cents: amount,
+                success: isSuccess,
+                is_auth: false,
+                is_capture: false,
+                is_standalone_payment: true,
+                is_voided: false,
+                is_refunded: false,
+                is_3d_secure: true,
+                integration_id: 5380556,
+                profile_id: 1100113,
+                has_parent_transaction: false,
+                order: paymobOrderId,
+                created_at: new Date().toISOString(),
+                currency: 'EGP',
+                error_occured: false,
+                data: { message: isSuccess ? 'Approved' : 'Failed' }
+            };
+
+            await makeRequest('/User/Checkout/paymob/callback', 'POST', payload, 'Manual Callback (JSON Body)');
+        }
+
+        // Quick failed callback
+        async function sendFailedCallback() {
+            const paymobOrderId = document.getElementById('paymobOrderId').value;
+            const transactionId = document.getElementById('transactionId').value;
+            
+            const payload = {
+                id: transactionId,
+                pending: false,
+                amount_cents: 4400,
+                success: false,
+                order: paymobOrderId,
+                currency: 'EGP',
+                error_occured: true,
+                data: { message: 'Payment failed' }
+            };
+
+            await makeRequest('/User/Checkout/paymob/callback', 'POST', payload, 'Failed Callback');
+        }
+
+        // Automatic Callback Simulation (Query Parameters)
+        function generateAutoCallbackUrl() {
+            const paymobOrderId = document.getElementById('autoPaymobOrderId').value;
+            const amount = document.getElementById('autoAmount').value;
+            
+            const baseUrl = window.location.origin;
+            const callbackUrl = `${baseUrl}/User/Checkout/paymob/callback?id=366427700&pending=false&amount_cents=${amount}&success=true&order=${paymobOrderId}&currency=EGP&data_message=Approved`;
+            
+            document.getElementById('generatedUrl').innerHTML = callbackUrl;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(callbackUrl).then(() => {
+                alert('URL copied to clipboard!');
+            });
+        }
+
+        async function testAutoCallback() {
+            const paymobOrderId = document.getElementById('autoPaymobOrderId').value;
+            const amount = document.getElementById('autoAmount').value;
+            
+            const url = `/User/Checkout/paymob/callback?id=366427700&pending=false&amount_cents=${amount}&success=true&order=${paymobOrderId}&currency=EGP&data_message=Approved`;
+            
+            await makeRequest(url, 'GET', null, 'Automatic Callback (Query Params)');
+        }
+
+        // Order Status Checking
+        async function checkOrderStatus() {
+            const paymobOrderId = document.getElementById('statusPaymobOrderId').value;
+            
+            try {
+                const response = await fetch(`/User/Checkout/paymob/order-status/${paymobOrderId}`);
+                const order = await response.json();
+                
+                const resultDiv = document.getElementById('orderStatusResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result info';
+                resultDiv.innerHTML = `
+                    <h3>📊 Order Status</h3>
+                    <pre>${JSON.stringify(order, null, 2)}</pre>
+                `;
+            } catch (error) {
+                const resultDiv = document.getElementById('orderStatusResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+            }
+        }
+
+        async function loadAllOrders() {
+            try {
+                const response = await fetch('/User/Checkout/paymob/orders');
+                const orders = await response.json();
+                
+                const resultDiv = document.getElementById('allOrdersResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result info';
+                resultDiv.innerHTML = `
+                    <h3>📦 Recent Orders</h3>
+                    <pre>${JSON.stringify(orders, null, 2)}</pre>
+                `;
+            } catch (error) {
+                const resultDiv = document.getElementById('allOrdersResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+            }
+        }
+
+        // Generic request function
+        async function makeRequest(url, method, payload, requestType) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (payload && method !== 'GET') {
+                    options.body = JSON.stringify(payload);
+                }
+
+                const response = await fetch(url, options);
+                const result = await response.json();
+                
+                displayResult(result, requestType, payload);
+                loadLogs(); // Refresh logs after request
+            } catch (error) {
+                displayError(error, requestType);
+            }
+        }
+
+        // Display results
+        function displayResult(result, requestType, payload) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = result.success ? 'result success' : 'result error';
+            resultDiv.innerHTML = `
+                <h3>${result.success ? '✅ Success' : '❌ Error'}</h3>
+                <p><strong>Request Type:</strong> ${requestType}</p>
+                <p><strong>Message:</strong> ${result.message || 'N/A'}</p>
+                <p><strong>Order ID:</strong> ${result.orderId || 'N/A'}</p>
+                <p><strong>Transaction:</strong> ${result.transactionReference || 'N/A'}</p>
+                ${payload ? `<p><strong>Payload:</strong><br><pre style=""font-size: 10px;"">${JSON.stringify(payload, null, 2)}</pre></p>` : ''}
+                <p><strong>Response:</strong><br><pre style=""font-size: 10px;"">${JSON.stringify(result, null, 2)}</pre></p>
+            `;
+        }
+
+        function displayError(error, requestType) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result error';
+            resultDiv.innerHTML = `
+                <h3>❌ Request Failed</h3>
+                <p><strong>Type:</strong> ${requestType}</p>
+                <p><strong>Error:</strong> ${error.message}</p>
+            `;
+        }
+
+        // Logs management
+        async function loadLogs() {
+            try {
+                const response = await fetch('/User/Checkout/paymob/logs');
+                const logs = await response.json();
+                
+                const container = document.getElementById('logsContainer');
+                container.innerHTML = logs.map(log => `
+                    <div class='log-entry log-${log.level.toLowerCase()}'>
+                        <strong>${new Date(log.timestamp).toLocaleString()}</strong> 
+                        [${log.level}] ${log.source}<br/>
+                        <strong>Message:</strong> ${log.message}<br/>
+                        ${log.details ? `<strong>Details:</strong> ${log.details}<br/>` : ''}
+                        ${log.orderId ? `<strong>Order ID:</strong> ${log.orderId}<br/>` : ''}
+                        ${log.paymobOrderId ? `<strong>Paymob Order:</strong> ${log.paymobOrderId}<br/>` : ''}
+                        ${log.transactionId ? `<strong>Transaction:</strong> ${log.transactionId}<br/>` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading logs:', error);
+            }
+        }
+
+        // Load logs on page load
+        loadLogs();
+    </script>
+</body>
+</html>";
+
+            return Content(html, "text/html");
+        }
+
+        // NEW: Endpoint to get recent logs
+        [HttpGet("paymob/logs")]
+        public async Task<ActionResult> GetLogs()
+        {
+            var logs = await _context.Logs
+                .OrderByDescending(l => l.Timestamp)
+                .Take(50)
+                .Select(l => new
+                {
+                    l.Timestamp,
+                    l.Level,
+                    l.Source,
+                    l.Message,
+                    l.Details,
+                    l.OrderId,
+                    l.PaymobOrderId,
+                    l.TransactionId
+                })
+                .ToListAsync();
+
+            return Ok(logs);
+        }
+
+        // NEW: Endpoint to check order status
+        [HttpGet("paymob/order-status/{paymobOrderId}")]
+        public async Task<ActionResult> GetOrderStatus(string paymobOrderId)
+        {
+            var order = await _context.Orders
+                .Where(o => o.PaymobOrderId == paymobOrderId)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.PaymobOrderId,
+                    o.PaymentStatus,
+                    o.Status,
+                    o.TotalAmount,
+                    o.TransactionId,
+                    o.OrderDate
+                })
+                .FirstOrDefaultAsync();
+
+            if (order == null)
+            {
+                return NotFound(new { message = "Order not found" });
+            }
+
+            return Ok(order);
+        }
+
+        // NEW: Endpoint to get all orders with Paymob IDs
+        [HttpGet("paymob/orders")]
+        public async Task<ActionResult> GetPaymobOrders()
+        {
+            var orders = await _context.Orders
+                .Where(o => o.PaymobOrderId != null && o.PaymobOrderId != ".")
+                .OrderByDescending(o => o.OrderDate)
+                .Take(20)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.PaymobOrderId,
+                    o.PaymentStatus,
+                    o.Status,
+                    o.TotalAmount,
+                    o.TransactionId,
+                    o.OrderDate
+                })
+                .ToListAsync();
+
+            return Ok(orders);
         }
 
         private class ValidationResult

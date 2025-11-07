@@ -259,16 +259,16 @@ namespace Digital_Mall_API.Controllers.Model
 
     public class UpdateProfileDto
     {
-        public string Name { get; set; }
-        public string Bio { get; set; }
-        public IFormFile Image { get; set; }
+        public string? Name { get; set; }
+        public string? Bio { get; set; }
+        public IFormFile? Image { get; set; }
     }
 
     public class UpdateSocialAccountsDto
     {
-        public string Facebook { get; set; }
-        public string Instagram { get; set; }
-        public string OtherSocialAccount { get; set; }
+        public string? Facebook { get; set; }
+        public string? Instagram { get; set; }
+        public string? OtherSocialAccount { get; set; }
     }
 
     public class ChangePasswordDto

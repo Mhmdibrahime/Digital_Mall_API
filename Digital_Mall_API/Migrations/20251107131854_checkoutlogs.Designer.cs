@@ -4,6 +4,7 @@ using Digital_Mall_API.Models.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Digital_Mall_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251107131854_checkoutlogs")]
+    partial class checkoutlogs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1068,33 +1071,6 @@ namespace Digital_Mall_API.Migrations
                     b.HasIndex("ReportedByCustomerId");
 
                     b.ToTable("ReelReports");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.SavedReel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CustomerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("ReelId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("SavedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("ReelId");
-
-                    b.ToTable("SavedReels");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TShirtSize", b =>
@@ -2234,25 +2210,6 @@ namespace Digital_Mall_API.Migrations
                     b.Navigation("Reel");
 
                     b.Navigation("ReportedByCustomer");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Reels___Content.SavedReel", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.User___Authentication.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Digital_Mall_API.Models.Entities.Reels___Content.Reel", "Reel")
-                        .WithMany()
-                        .HasForeignKey("ReelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("Reel");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.T_Shirt_Customization.TshirtDesignOrderImage", b =>

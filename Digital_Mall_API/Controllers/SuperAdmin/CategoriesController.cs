@@ -316,7 +316,257 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 return StatusCode(500, new { message = "An error occurred while retrieving the category", error = ex.Message });
             }
         }
+        [HttpPut("edit-category/{id}")]
+        public async Task<ActionResult<CategoryResponseDto>> EditCategory(int id, [FromForm] EditCategoryDto request)
+        {
+            try
+            {
+                var category = await _context.Categories
+                    .Include(c => c.SubCategories)
+                    .FirstOrDefaultAsync(c => c.Id == id);
 
+                if (category == null)
+                {
+                    return NotFound(new { message = "Category not found" });
+                }
+
+                // Check if name already exists (excluding current category)
+                var existingCategory = await _context.Categories
+                    .FirstOrDefaultAsync(c => c.Name.ToLower() == request.Name.ToLower() && c.Id != id);
+
+                if (existingCategory != null)
+                {
+                    return Conflict(new { message = "A category with this name already exists." });
+                }
+
+                // Update category properties
+                category.Name = request.Name;
+                category.Description = request.Description ?? string.Empty;
+
+                // Handle image update if new image is provided
+                if (request.Image != null && request.Image.Length > 0)
+                {
+                    var imageUrl = await SaveImage(request.Image, "categories");
+                    if (!string.IsNullOrEmpty(imageUrl))
+                    {
+                        // Delete old image if exists
+                        if (!string.IsNullOrEmpty(category.ImageUrl))
+                        {
+                            DeleteOldImage(category.ImageUrl);
+                        }
+                        category.ImageUrl = imageUrl;
+                    }
+                }
+
+                // Handle subcategory assignments
+                if (request.SubCategoryIds != null)
+                {
+                    await UpdateCategorySubcategories(category, request.SubCategoryIds);
+                }
+
+                await _context.SaveChangesAsync();
+
+                var updatedCategory = await _context.Categories
+                    .Include(c => c.SubCategories)
+                    .Where(c => c.Id == category.Id)
+                    .Select(c => new CategoryResponseDto
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        Description = c.Description,
+                        ImageUrl = c.ImageUrl,
+                        TotalProducts = c.SubCategories.Sum(sc =>
+                            _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)),
+                        SubCategories = c.SubCategories.Select(sc => new SubCategoryResponseDto
+                        {
+                            Id = sc.Id,
+                            Name = sc.Name,
+                            ImageUrl = sc.ImageUrl,
+                            CategoryId = sc.CategoryId,
+                            CategoryName = c.Name,
+                            ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
+                        }).ToList()
+                    })
+                    .FirstOrDefaultAsync();
+
+                return Ok(updatedCategory);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while updating the category",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpPut("edit-subcategory/{id}")]
+        public async Task<ActionResult<SubCategoryResponseDto>> EditSubCategory(int id, [FromForm] EditSubCategoryDto request)
+        {
+            try
+            {
+                var subCategory = await _context.SubCategories
+                    .Include(sc => sc.Category)
+                    .FirstOrDefaultAsync(sc => sc.Id == id);
+
+                if (subCategory == null)
+                {
+                    return NotFound(new { message = "Subcategory not found" });
+                }
+
+                // Check if name already exists in the same category (excluding current subcategory)
+                var existingSubCategory = await _context.SubCategories
+                    .FirstOrDefaultAsync(sc =>
+                        sc.CategoryId == request.CategoryId &&
+                        sc.Name.ToLower() == request.Name.ToLower() &&
+                        sc.Id != id);
+
+                if (existingSubCategory != null)
+                {
+                    return Conflict(new { message = "A subcategory with this name already exists in the selected category." });
+                }
+
+                // Update subcategory properties
+                subCategory.Name = request.Name;
+                subCategory.CategoryId = request.CategoryId;
+
+                // Handle image update if new image is provided
+                if (request.Image != null && request.Image.Length > 0)
+                {
+                    var imageUrl = await SaveImage(request.Image, "subcategories");
+                    if (!string.IsNullOrEmpty(imageUrl))
+                    {
+                        // Delete old image if exists
+                        if (!string.IsNullOrEmpty(subCategory.ImageUrl))
+                        {
+                            DeleteOldImage(subCategory.ImageUrl);
+                        }
+                        subCategory.ImageUrl = imageUrl;
+                    }
+                }
+                else if (request.RemoveImage)
+                {
+                    // Remove existing image if requested
+                    if (!string.IsNullOrEmpty(subCategory.ImageUrl))
+                    {
+                        DeleteOldImage(subCategory.ImageUrl);
+                        subCategory.ImageUrl = null;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                var updatedSubCategory = await _context.SubCategories
+                    .Include(sc => sc.Category)
+                    .Where(sc => sc.Id == subCategory.Id)
+                    .Select(sc => new SubCategoryResponseDto
+                    {
+                        Id = sc.Id,
+                        Name = sc.Name,
+                        ImageUrl = sc.ImageUrl,
+                        CategoryId = sc.CategoryId,
+                        CategoryName = sc.Category.Name,
+                        ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
+                    })
+                    .FirstOrDefaultAsync();
+
+                return Ok(updatedSubCategory);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while updating the subcategory",
+                    error = ex.Message
+                });
+            }
+        }
+
+     
+
+
+        [HttpGet("subcategory/{id}/details")]
+        public async Task<ActionResult<SubCategoryDetailDto>> GetSubCategoryDetails(int id)
+        {
+            try
+            {
+                var subCategory = await _context.SubCategories
+                    .Include(sc => sc.Category)
+                    .Where(sc => sc.Id == id)
+                    .Select(sc => new SubCategoryDetailDto
+                    {
+                        Id = sc.Id,
+                        Name = sc.Name,
+                        ImageUrl = sc.ImageUrl,
+                        CategoryId = sc.CategoryId,
+                        CategoryName = sc.Category.Name,
+                        ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive),
+                        HasImage = !string.IsNullOrEmpty(sc.ImageUrl)
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (subCategory == null)
+                {
+                    return NotFound(new { message = "Subcategory not found" });
+                }
+
+                return Ok(subCategory);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving subcategory details",
+                    error = ex.Message
+                });
+            }
+        }
+
+
+        private async Task UpdateCategorySubcategories(Category category, List<int> newSubCategoryIds)
+        {
+            // Get current subcategories
+            var currentSubCategoryIds = category.SubCategories.Select(sc => sc.Id).ToList();
+
+            //// Subcategories to remove from this category
+            //var subCategoriesToRemove = category.SubCategories
+            //    .Where(sc => !newSubCategoryIds.Contains(sc.Id))
+            //    .ToList();
+
+            // Subcategories to add to this category
+            var subCategoriesToAdd = await _context.SubCategories
+                .Where(sc => newSubCategoryIds.Contains(sc.Id) && !currentSubCategoryIds.Contains(sc.Id))
+                .ToListAsync();
+
+           
+
+            // Add subcategories to this category
+            foreach (var subCategory in subCategoriesToAdd)
+            {
+                subCategory.CategoryId = category.Id;
+            }
+        }
+
+        private void DeleteOldImage(string imageUrl)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(imageUrl))
+                {
+                    var fullPath = Path.Combine(_environment.WebRootPath, imageUrl.TrimStart('/'));
+                    if (System.IO.File.Exists(fullPath))
+                    {
+                        System.IO.File.Delete(fullPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't throw - we don't want image deletion failure to break the main operation
+                Console.WriteLine($"Warning: Failed to delete old image: {ex.Message}");
+            }
+        }
         private async Task<string> SaveImage(IFormFile image, string folder)
         {
             try

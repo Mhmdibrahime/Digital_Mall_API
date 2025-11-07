@@ -53,6 +53,10 @@ namespace Digital_Mall_API.Models.Entities.Orders___Shopping
         public string PaymentStatus { get; set; }
         [StringLength(5000)]
         public string Notes { get; set; }
+        [StringLength(30)]
+        public string PaymobOrderId { get; set; }
+        [StringLength(100)]
+        public string TransactionId { get; set; }
         public virtual Customer? Customer{ get; set; }
        
         public virtual List<OrderItem>? OrderItems { get; set; } = new List<OrderItem>();

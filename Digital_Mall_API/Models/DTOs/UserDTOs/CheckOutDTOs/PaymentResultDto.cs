@@ -6,5 +6,7 @@
         public string Message { get; set; }
         public int OrderId { get; set; }
         public string TransactionReference { get; set; }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; }
     }
 }

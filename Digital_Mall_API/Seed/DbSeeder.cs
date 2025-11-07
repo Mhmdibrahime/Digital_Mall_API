@@ -12,9 +12,9 @@ namespace Digital_Mall_API.Seed
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
             const string adminRole = "Admin";
-            const string adminUserName = "Admin";
-            const string adminEmail = "admin@Zobry.com";
-            const string adminPassword = "Admin@20";
+            const string adminUserName = "TBIGOO Admin";
+            const string adminEmail = "admin@tbigoo.com";
+            const string adminPassword = "Admin@tbig00";
 
            
             if (!await roleManager.RoleExistsAsync(adminRole))
@@ -23,7 +23,7 @@ namespace Digital_Mall_API.Seed
             }
 
             
-            var admin = await userManager.FindByNameAsync(adminUserName);
+            var admin = await userManager.FindByEmailAsync(adminEmail);
             if (admin == null)
             {
                 var adminUser = new ApplicationUser

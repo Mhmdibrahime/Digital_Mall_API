@@ -24,15 +24,27 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         [HttpGet("summary")]
         public async Task<ActionResult<DiscountSummaryDto>> GetDiscountSummary()
         {
-            var totalDiscounts = await _context.ProductDiscounts.CountAsync();
+            var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (brandId == null)
+            {
+                return Unauthorized();
+            }
+            var brand = await _context.Brands
+                .FirstOrDefaultAsync(b => b.Id == brandId);
+            if (brand == null)
+            {
+                return NotFound("Brand not found.");
+            }
+
+            var totalDiscounts = await _context.ProductDiscounts.CountAsync(x=>x.BrandId == brandId);
             var activeDiscounts = await _context.ProductDiscounts
-                .Where(d => d.Status == "Active")
+                .Where(d => d.Status == "Active" && d.BrandId == brandId)
                 .CountAsync();
             var inactiveDiscounts = await _context.ProductDiscounts
-                .Where(d => d.Status == "Inactive")
+                .Where(d => d.Status == "Inactive" && d.BrandId == brandId)
                 .CountAsync();
             var promoCodes = await _context.PromoCodes
-                .CountAsync();
+                .CountAsync(x=>x.BrandId == brandId);
 
             return new DiscountSummaryDto
             {

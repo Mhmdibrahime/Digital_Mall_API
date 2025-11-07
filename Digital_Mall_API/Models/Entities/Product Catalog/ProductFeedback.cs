@@ -19,6 +19,7 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
 
         [StringLength(1000)]
         public string? Comment { get; set; }
+        public string? ImageUrl { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

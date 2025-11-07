@@ -30,10 +30,6 @@ namespace Digital_Mall_API.Controllers.Reels
             try
             {
                 var customerId = GetCurrentCustomerId();
-                if (string.IsNullOrEmpty(customerId))
-                {
-                    return Unauthorized("User not authenticated");
-                }
 
                 var baseQuery = _context.Reels
                     .Where(r => r.UploadStatus == "ready" && (r.PostedByBrand.Status == "Active" || r.PostedByModel.Status == "Active"))
@@ -44,14 +40,34 @@ namespace Digital_Mall_API.Controllers.Reels
                         .ThenInclude(p => p.Images)
                     .AsQueryable();
 
-                var forYouReels = await GetForYouAlgorithmReels(baseQuery, customerId, page, pageSize);
+                List<Reel> forYouReels;
+
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    // User not authenticated - return random reels
+                    forYouReels = await GetRandomReels(baseQuery, page, pageSize);
+                }
+                else
+                {
+                    // User authenticated - use the existing algorithm
+                    forYouReels = await GetForYouAlgorithmReels(baseQuery, customerId, page, pageSize);
+                }
 
                 var reelIds = forYouReels.Select(r => r.Id).ToList();
-                var userLikes = await _context.ReelLikes
-                    .Where(l => l.CustomerId == customerId && reelIds.Contains(l.ReelId))
-                    .Select(l => l.ReelId)
-                    .ToListAsync();
 
+                // Get user likes only if authenticated
+                List<int> userLikes = new List<int>();
+                if (!string.IsNullOrEmpty(customerId))
+                {
+                    userLikes = await _context.ReelLikes
+                        .Where(l => l.CustomerId == customerId && reelIds.Contains(l.ReelId))
+                        .Select(l => l.ReelId)
+                        .ToListAsync();
+                }
+                var userSaves = await _context.SavedReels
+                   .Where(sr => sr.CustomerId == customerId && reelIds.Contains(sr.ReelId))
+                   .Select(sr => sr.ReelId)
+                   .ToListAsync();
                 var reelDtos = forYouReels.Select(reel => new ReelFeedDto
                 {
                     Id = reel.Id,
@@ -63,6 +79,8 @@ namespace Digital_Mall_API.Controllers.Reels
                     LikesCount = reel.LikesCount,
                     SharesCount = reel.SharesCount,
                     IsLikedByCurrentUser = userLikes.Contains(reel.Id),
+                    IsSavedByCurrentUser = userSaves.Contains(reel.Id),
+
                     PostedByUserType = reel.PostedByUserType,
                     PostedByUserId = reel.PostedByUserId,
                     PostedByName = reel.PostedByUserType == "FashionModel"
@@ -131,6 +149,10 @@ namespace Digital_Mall_API.Controllers.Reels
                     .Where(l => l.CustomerId == customerId && reelIds.Contains(l.ReelId))
                     .Select(l => l.ReelId)
                     .ToListAsync();
+                var userSaves = await _context.SavedReels
+                   .Where(sr => sr.CustomerId == customerId && reelIds.Contains(sr.ReelId))
+                   .Select(sr => sr.ReelId)
+                   .ToListAsync();
 
                 var reelDtos = followingReels.Select(reel => new ReelFeedDto
                 {
@@ -143,6 +165,8 @@ namespace Digital_Mall_API.Controllers.Reels
                     LikesCount = reel.LikesCount,
                     SharesCount = reel.SharesCount,
                     IsLikedByCurrentUser = userLikes.Contains(reel.Id),
+                    IsSavedByCurrentUser = userSaves.Contains(reel.Id),
+
                     PostedByUserType = reel.PostedByUserType,
                     PostedByUserId = reel.PostedByUserId,
                     PostedByName = reel.PostedByUserType == "FashionModel"
@@ -301,17 +325,302 @@ namespace Digital_Mall_API.Controllers.Reels
             }
         }
 
+        // POST: api/reels-feed/report
+        [HttpPost("report")]
+        public async Task<ActionResult> ReportReel([FromBody] ReportReelRequest request)
+        {
+            try
+            {
+                var customerId = GetCurrentCustomerId();
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                var reel = await _context.Reels.FindAsync(request.ReelId);
+                if (reel == null)
+                {
+                    return NotFound("Reel not found");
+                }
+
+                // Check if user already reported this reel
+                var existingReport = await _context.ReelReports
+                    .FirstOrDefaultAsync(r => r.ReelId == request.ReelId && r.ReportedByCustomerId == customerId);
+
+                if (existingReport != null)
+                {
+                    return BadRequest("You have already reported this reel");
+                }
+
+                var report = new ReelReport
+                {
+                    ReelId = request.ReelId,
+                    ReportedByCustomerId = customerId,
+                    Reason = request.Reason,
+                    AdditionalDetails = request.AdditionalDetails,
+                    ReportedAt = DateTime.UtcNow,
+                    Status = "Pending"
+                };
+
+                _context.ReelReports.Add(report);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Reel reported successfully", reportId = report.Id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reporting reel {ReelId}", request.ReelId);
+                return StatusCode(500, "Error processing report");
+            }
+        }
+        // ========== SAVE REELS ENDPOINTS ==========
+
+        [HttpPost("save/{reelId}")]
+        public async Task<ActionResult<SaveReelResponse>> SaveReel(int reelId)
+        {
+            try
+            {
+                var customerId = GetCurrentCustomerId();
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                var reel = await _context.Reels
+                    .Include(r => r.PostedByModel)
+                    .Include(r => r.PostedByBrand)
+                    .FirstOrDefaultAsync(r => r.Id == reelId);
+
+                if (reel == null)
+                {
+                    return NotFound("Reel not found");
+                }
+
+                // Check if reel is already saved
+                var existingSave = await _context.SavedReels
+                    .FirstOrDefaultAsync(sr => sr.ReelId == reelId && sr.CustomerId == customerId);
+
+                if (existingSave != null)
+                {
+                    // Unsave the reel
+                    _context.SavedReels.Remove(existingSave);
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new SaveReelResponse
+                    {
+                        ReelId = reelId,
+                        IsSaved = false,
+                        Message = "Reel unsaved successfully"
+                    });
+                }
+
+                // Save the reel
+                var savedReel = new SavedReel
+                {
+                    ReelId = reelId,
+                    CustomerId = customerId,
+                    SavedAt = DateTime.UtcNow
+                };
+
+                _context.SavedReels.Add(savedReel);
+                await _context.SaveChangesAsync();
+
+                return Ok(new SaveReelResponse
+                {
+                    ReelId = reelId,
+                    IsSaved = true,
+                    Message = "Reel saved successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving/unsaving reel {ReelId}", reelId);
+                return StatusCode(500, "Error processing save request");
+            }
+        }
+
+        [HttpGet("saved")]
+        public async Task<ActionResult<List<ReelFeedDto>>> GetSavedReels(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var customerId = GetCurrentCustomerId();
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                var savedReels = await _context.SavedReels
+                    .Where(sr => sr.CustomerId == customerId)
+                    .OrderByDescending(sr => sr.SavedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Include(sr => sr.Reel)
+                        .ThenInclude(r => r.PostedByModel)
+                    .Include(sr => sr.Reel)
+                        .ThenInclude(r => r.PostedByBrand)
+                    .Include(sr => sr.Reel)
+                        .ThenInclude(r => r.LinkedProducts)
+                        .ThenInclude(rp => rp.Product)
+                        .ThenInclude(p => p.Images)
+                    .Select(sr => sr.Reel)
+                    .Where(r => r.UploadStatus == "ready" && (r.PostedByModel.Status == "Active" || r.PostedByBrand.Status == "Active"))
+                    .ToListAsync();
+
+                var reelIds = savedReels.Select(r => r.Id).ToList();
+
+                // Get user likes for these reels
+                var userLikes = await _context.ReelLikes
+                    .Where(l => l.CustomerId == customerId && reelIds.Contains(l.ReelId))
+                    .Select(l => l.ReelId)
+                    .ToListAsync();
+
+                // Get user saves for these reels (should all be saved, but we'll check anyway)
+                var userSaves = await _context.SavedReels
+                    .Where(sr => sr.CustomerId == customerId && reelIds.Contains(sr.ReelId))
+                    .Select(sr => sr.ReelId)
+                    .ToListAsync();
+
+                var reelDtos = savedReels.Select(reel => new ReelFeedDto
+                {
+                    Id = reel.Id,
+                    Caption = reel.Caption,
+                    VideoUrl = reel.VideoUrl,
+                    ThumbnailUrl = reel.ThumbnailUrl,
+                    PostedDate = reel.PostedDate,
+                    DurationInSeconds = reel.DurationInSeconds,
+                    LikesCount = reel.LikesCount,
+                    SharesCount = reel.SharesCount,
+                    IsLikedByCurrentUser = userLikes.Contains(reel.Id),
+                    IsSavedByCurrentUser = userSaves.Contains(reel.Id),
+                    
+                    PostedByUserType = reel.PostedByUserType,
+                    PostedByUserId = reel.PostedByUserId,
+                    PostedByName = reel.PostedByUserType == "FashionModel"
+                        ? reel.PostedByModel.Name
+                        : reel.PostedByBrand.OfficialName,
+                    PostedByImage = reel.PostedByUserType == "FashionModel"
+                        ? reel.PostedByModel.ImageUrl
+                        : reel.PostedByBrand.LogoUrl,
+                    LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
+                    {
+                        ProductId = rp.ProductId,
+                        ProductName = rp.Product.Name,
+                        ProductPrice = rp.Product.Price,
+                        ProductImageUrl = rp.Product.Images.Select(i => i.ImageUrl).FirstOrDefault()
+                    }).ToList()
+                }).ToList();
+
+                return Ok(reelDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting saved reels for user");
+                return StatusCode(500, "Error retrieving saved reels");
+            }
+        }
+
+        [HttpGet("{reelId}/is-saved")]
+        public async Task<ActionResult<IsSavedResponse>> IsReelSaved(int reelId)
+        {
+            try
+            {
+                var customerId = GetCurrentCustomerId();
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                var isSaved = await _context.SavedReels
+                    .AnyAsync(sr => sr.ReelId == reelId && sr.CustomerId == customerId);
+
+                // If saved, get the saved date
+                DateTime? savedAt = null;
+                if (isSaved)
+                {
+                    savedAt = await _context.SavedReels
+                        .Where(sr => sr.ReelId == reelId && sr.CustomerId == customerId)
+                        .Select(sr => sr.SavedAt)
+                        .FirstOrDefaultAsync();
+                }
+
+                return Ok(new IsSavedResponse
+                {
+                    ReelId = reelId,
+                    IsSaved = isSaved,
+                    SavedAt = savedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking if reel {ReelId} is saved", reelId);
+                return StatusCode(500, "Error checking save status");
+            }
+        }
+
+        [HttpGet("saved/count")]
+        public async Task<ActionResult<SavedReelsCountResponse>> GetSavedReelsCount()
+        {
+            try
+            {
+                var customerId = GetCurrentCustomerId();
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                var count = await _context.SavedReels
+                    .Where(sr => sr.CustomerId == customerId)
+                    .CountAsync();
+
+                return Ok(new SavedReelsCountResponse
+                {
+                    TotalSavedReels = count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting saved reels count for user");
+                return StatusCode(500, "Error retrieving saved reels count");
+            }
+        }
         private string GetCurrentCustomerId()
         {
-          var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return userId;
         }
 
+        private async Task<List<Reel>> GetRandomReels(IQueryable<Reel> baseQuery, int page, int pageSize)
+        {
+            // Get total count for efficient random selection
+            var totalCount = await baseQuery.CountAsync();
+
+            if (totalCount <= pageSize)
+            {
+                return await baseQuery
+                    .OrderBy(r => Guid.NewGuid())
+                    .Take(pageSize)
+                    .ToListAsync();
+            }
+
+            // For larger datasets, use a more efficient random approach
+            var skip = (page - 1) * pageSize;
+            var randomReels = await baseQuery
+                .OrderBy(r => Guid.NewGuid())
+                .Skip(skip)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return randomReels;
+        }
+
         private async Task<List<Reel>> GetForYouAlgorithmReels(
-    IQueryable<Reel> baseQuery,
-    string customerId,
-    int page,
-    int pageSize)
+            IQueryable<Reel> baseQuery,
+            string customerId,
+            int page,
+            int pageSize)
         {
             var pageStart = (page - 1) * pageSize;
             var halfPageSize = pageSize / 2;
@@ -389,6 +698,5 @@ namespace Digital_Mall_API.Controllers.Reels
                 .Take(pageSize)
                 .ToList();
         }
-
     }
 }

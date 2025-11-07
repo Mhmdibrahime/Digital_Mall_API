@@ -1,5 +1,7 @@
-﻿using Digital_Mall_API.Models.Data;
+﻿using Digital_Mall_API.Controllers.Reels;
+using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.DTOs.UserDTOs;
+using Digital_Mall_API.Models.DTOs.UserDTOs.ReelsDTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -504,5 +506,125 @@ namespace Digital_Mall_API.Controllers.User
                 }
             });
         }
+        [HttpGet("random-reels")]
+        public async Task<ActionResult<List<RandomReelFeedDto>>> GetRandomReels()
+        {
+            try
+            {
+                // Get 10 random active reels
+                var randomReels = await _context.Reels
+                    .Where(r => r.UploadStatus == "ready" &&
+                               (r.PostedByModel.Status == "Active" || r.PostedByBrand.Status == "Active"))
+                    .Include(r => r.PostedByModel)
+                    .Include(r => r.PostedByBrand)
+                    .Include(r => r.LinkedProducts)
+                        .ThenInclude(rp => rp.Product)
+                        .ThenInclude(p => p.Images)
+                    .OrderBy(r => Guid.NewGuid()) // Random order
+                    .Take(10)
+                    .ToListAsync();
+
+                var reelIds = randomReels.Select(r => r.Id).ToList();
+
+                
+
+                var reelDtos = randomReels.Select(reel => new ReelFeedDto
+                {
+                    Id = reel.Id,
+                    Caption = reel.Caption,
+                    VideoUrl = reel.VideoUrl,
+                    ThumbnailUrl = reel.ThumbnailUrl,
+                    PostedDate = reel.PostedDate,
+                    DurationInSeconds = reel.DurationInSeconds,
+                    LikesCount = reel.LikesCount,
+                    SharesCount = reel.SharesCount,
+                    PostedByUserType = reel.PostedByUserType,
+                    PostedByUserId = reel.PostedByUserId,
+                    PostedByName = reel.PostedByUserType == "FashionModel"
+                        ? reel.PostedByModel.Name
+                        : reel.PostedByBrand.OfficialName,
+                    PostedByImage = reel.PostedByUserType == "FashionModel"
+                        ? reel.PostedByModel.ImageUrl
+                        : reel.PostedByBrand.LogoUrl,
+                    LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
+                    {
+                        ProductId = rp.ProductId,
+                        ProductName = rp.Product.Name,
+                        ProductPrice = rp.Product.Price,
+                        ProductImageUrl = rp.Product.Images.Select(i => i.ImageUrl).FirstOrDefault()
+                    }).ToList()
+                }).ToList();
+
+                return Ok(reelDtos);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception if you have a logger
+                // _logger.LogError(ex, "Error getting random reels");
+                return StatusCode(500, "Error retrieving random reels");
+            }
+        }
+
+        [HttpGet("reel/{id}")]
+        public async Task<ActionResult<RandomReelFeedDto>> GetReelById(int id)
+        {
+            try
+            {
+                var reel = await _context.Reels
+                    .Where(r => r.Id == id && r.UploadStatus == "ready" &&
+                               (r.PostedByModel.Status == "Active" || r.PostedByBrand.Status == "Active"))
+                    .Include(r => r.PostedByModel)
+                    .Include(r => r.PostedByBrand)
+                    .Include(r => r.LinkedProducts)
+                        .ThenInclude(rp => rp.Product)
+                        .ThenInclude(p => p.Images)
+                    .FirstOrDefaultAsync();
+
+                if (reel == null)
+                {
+                    return NotFound(new { message = "Reel not found" });
+                }
+
+
+              
+
+                var reelDto = new ReelFeedDto
+                {
+                    Id = reel.Id,
+                    Caption = reel.Caption,
+                    VideoUrl = reel.VideoUrl,
+                    ThumbnailUrl = reel.ThumbnailUrl,
+                    PostedDate = reel.PostedDate,
+                    DurationInSeconds = reel.DurationInSeconds,
+                    LikesCount = reel.LikesCount,
+                    SharesCount = reel.SharesCount,
+                    PostedByUserType = reel.PostedByUserType,
+                    PostedByUserId = reel.PostedByUserId,
+                    PostedByName = reel.PostedByUserType == "FashionModel"
+                        ? reel.PostedByModel.Name
+                        : reel.PostedByBrand.OfficialName,
+                    PostedByImage = reel.PostedByUserType == "FashionModel"
+                        ? reel.PostedByModel.ImageUrl
+                        : reel.PostedByBrand.LogoUrl,
+                    LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
+                    {
+                        ProductId = rp.ProductId,
+                        ProductName = rp.Product.Name,
+                        ProductPrice = rp.Product.Price,
+                        ProductImageUrl = rp.Product.Images.Select(i => i.ImageUrl).FirstOrDefault()
+                    }).ToList()
+                };
+
+                return Ok(reelDto);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception if you have a logger
+                // _logger.LogError(ex, $"Error getting reel with ID {id}");
+                return StatusCode(500, "Error retrieving reel details");
+            }
+        }
+
+        
     }
 }

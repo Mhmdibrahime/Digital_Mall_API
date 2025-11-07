@@ -150,7 +150,8 @@ namespace Digital_Mall_API.Controllers.User
             return count.ToString();
         }
         [HttpPost("product-feedback")]
-        public async Task<IActionResult> AddFeedback([FromBody] AddProductFeedbackDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> AddFeedback([FromForm] AddProductFeedbackDto dto)
         {
             var userId = _userManager.GetUserId(User); 
             if (userId == null)
@@ -160,18 +161,53 @@ namespace Digital_Mall_API.Controllers.User
             if (product == null)
                 return NotFound(new { message = "Product not found" });
 
-            var feedback = new ProductFeedback
+            try
             {
-                ProductId = dto.ProductId,
-                UserId = userId,
-                Rating = dto.Rating,
-                Comment = dto.Comment
-            };
+                string fileUrl = string.Empty;
+                if (dto.File != null)
+                {
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "feedbacks");
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+                    var uniqueFileName = $"{Guid.NewGuid()}_{dto.File.FileName}";
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await dto.File.CopyToAsync(fileStream);
+                    }
+                    fileUrl = $"/uploads/feedbacks/{uniqueFileName}";
 
-            _context.ProductFeedbacks.Add(feedback);
-            await _context.SaveChangesAsync();
+                }
+                var feedbackWithImage = new ProductFeedback
+                {
+                    ProductId = dto.ProductId,
+                    UserId = userId,
+                    Rating = dto.Rating,
+                    Comment = dto.Comment,
+                    ImageUrl = fileUrl
+                };
+                _context.ProductFeedbacks.Add(feedbackWithImage);
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Feedback added successfully" });
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, $"Error while adding the feedback: {ex.Message}");
+            }
+            //var feedback = new ProductFeedback
+            //{
+            //    ProductId = dto.ProductId,
+            //    UserId = userId,
+            //    Rating = dto.Rating,
+            //    Comment = dto.Comment
+            //};
 
-            return Ok(new { message = "Feedback added successfully" });
+            //_context.ProductFeedbacks.Add(feedback);
+            //await _context.SaveChangesAsync();
+
+            // return Ok(new { message = "Feedback added successfully" });
         }
 
         [HttpGet("product-feedbacks")]
@@ -205,6 +241,7 @@ namespace Digital_Mall_API.Controllers.User
                     UserName = f.User != null ? f.User.FullName : "Anonymous",
                     Rating = f.Rating,
                     Comment = f.Comment,
+                    ImageUrl = f.ImageUrl,
                     CreatedAt = f.CreatedAt
                 })
                 .ToListAsync();

@@ -19,15 +19,18 @@ namespace Digital_Mall_API.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
         public ProfileController(
             UserManager<ApplicationUser> userManager,
             AppDbContext context,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment
+            ,SignInManager<ApplicationUser> signInManager)
         {
             _userManager = userManager;
             _context = context;
             _environment = environment;
+            _signInManager = signInManager;
         }
 
         [HttpGet("balance")]
@@ -56,7 +59,7 @@ namespace Digital_Mall_API.Controllers
                 var user = await GetCurrentUser();
                 if (user == null)
                 {
-                    return Unauthorized("User not found");
+                    return Unauthorized("User not authenticated");
                 }
 
                 var customer = await _context.Customers
@@ -912,6 +915,150 @@ namespace Digital_Mall_API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, $"Error creating refund request: {ex.Message}");
+            }
+        }
+        [HttpDelete("delete-account")]
+        public async Task<ActionResult<DeleteAccountResponseDto>> DeleteUserAccount([FromBody] DeleteAccountRequestDto request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                if (!request.ConfirmDeletion)
+                {
+                    return BadRequest(new { message = "Please confirm deletion by setting ConfirmDeletion to true" });
+                }
+
+                var user = await GetCurrentUser();
+                if (user == null)
+                {
+                    return Unauthorized("User not found");
+                }
+
+                // Verify password
+                var isPasswordValid = await _userManager.CheckPasswordAsync(user, request.Password);
+                if (!isPasswordValid)
+                {
+                    return BadRequest(new { message = "Invalid password" });
+                }
+
+                var customer = await _context.Customers
+                    .FirstOrDefaultAsync(c => c.Email == user.Email);
+
+                // Start transaction for data consistency
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // 1. Delete user's following relationships
+                    var followingBrands = await _context.FollowingBrands
+                        .Where(fb => fb.CustomerId == customer.Id)
+                        .ToListAsync();
+                    _context.FollowingBrands.RemoveRange(followingBrands);
+
+                    var followingModels = await _context.FollowingModels
+                        .Where(fm => fm.CustomerId == customer.Id)
+                        .ToListAsync();
+                    _context.FollowingModels.RemoveRange(followingModels);
+
+                    // 2. Handle refund requests (mark as cancelled or delete based on your business logic)
+                    var refundRequests = await _context.RefundRequests
+                        .Where(r => r.CustomerId == customer.Id)
+                        .ToListAsync();
+                    var refundTransactions = await _context.RefundTransactions
+                        .Where(rt => rt.CustomerId == customer.Id)
+                        .ToListAsync();
+
+                    // Option 1: Delete refund requests
+                    //_context.RefundRequests.RemoveRange(refundRequests);
+
+                    // Option 2: Mark as cancelled (recommended for audit purposes)
+                    foreach (var refund in refundRequests)
+                    {
+                        refund.CustomerId = "DELETED_USER";
+                        refund.Status = "Cancelled - Account Deleted";
+                    }
+                    foreach (var refundTx in refundTransactions)
+                    {
+                        refundTx.CustomerId = "DELETED_USER";
+                        refundTx.Status = "Account Deleted";
+
+                    }
+
+                    // 3. Handle orders (anonymize or mark as cancelled based on your business logic)
+                    var userOrders = await _context.Orders
+                        .Where(o => o.CustomerId == customer.Id)
+                        .ToListAsync();
+
+                    // Option 1: Anonymize order data (recommended for legal compliance)
+                    foreach (var order in userOrders)
+                    {
+                        // Keep order records but remove personal identifiers
+                        order.CustomerId = "DELETED_USER";
+                        
+                    }
+
+                    // 4. Delete customer record
+                    if (customer != null)
+                    {
+                        _context.Customers.Remove(customer);
+                    }
+
+                    // 5. Delete profile picture file if exists
+                    if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+                    {
+                        var uploadsPath = Path.Combine(_environment.WebRootPath, "uploads", "profile-pictures");
+                        var fileName = Path.GetFileName(user.ProfilePictureUrl);
+                        var filePath = Path.Combine(uploadsPath, fileName);
+
+                        if (System.IO.File.Exists(filePath))
+                        {
+                            System.IO.File.Delete(filePath);
+                        }
+                    }
+
+                    // 6. Delete user from Identity system
+                    var result = await _userManager.DeleteAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest(new DeleteAccountResponseDto
+                        {
+                            Success = false,
+                            Message = string.Join(", ", result.Errors.Select(e => e.Description))
+                        });
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    // Sign out the user after account deletion
+                    // Note: You might need to inject SignInManager for this
+                    await _signInManager.SignOutAsync();
+
+                    return Ok(new DeleteAccountResponseDto
+                    {
+                        Success = true,
+                        Message = "Account and all personal data have been successfully deleted",
+                        DeletionDate = DateTime.UtcNow
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    throw; // Re-throw to be caught by outer catch block
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new DeleteAccountResponseDto
+                {
+                    Success = false,
+                    Message = $"Error deleting account: {ex.Message}"
+                });
             }
         }
     }

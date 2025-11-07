@@ -81,6 +81,7 @@ namespace Digital_Mall_API.Controllers.Account
                 Id = user.Id.ToString(), 
                 FullName = dto.FullName,
                 Email = dto.Email,
+                PhoneNumber = dto.MobileNumber,
                 Password = dto.Password, 
                 Status = "Active",
                 CreatedAt = DateTime.UtcNow
@@ -162,7 +163,7 @@ namespace Digital_Mall_API.Controllers.Account
                 Name = dto.ModelName,
                 Password = dto.Password, 
                 EvidenceOfProofUrl = await _fileService.SaveFileAsync(dto.PersonalProof, "ModelProofs"),
-                Status = "Pending",
+                Status = "Active",
                 CreatedAt = DateTime.UtcNow
             };
 
