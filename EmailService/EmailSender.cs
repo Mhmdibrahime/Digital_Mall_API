@@ -11,32 +11,35 @@ namespace EmailService
 {
     public class EmailSender : IEmailSender
     {
-        
         private readonly EmailConfiguration emailConfiguration;
 
         public EmailSender(EmailConfiguration emailConfiguration)
         {
-            
             this.emailConfiguration = emailConfiguration;
         }
+
         public void SendEmail(Message message)
         {
             var emailMessage = CreateEmailMessage(message);
             Send(emailMessage);
         }
+
         private MimeMessage CreateEmailMessage(Message message)
         {
             var emailMessage = new MimeMessage();
-            emailMessage.From.Add(new MailboxAddress(emailConfiguration.From,emailConfiguration.From));
+            emailMessage.From.Add(new MailboxAddress(emailConfiguration.From, emailConfiguration.From));
             emailMessage.To.AddRange(message.To);
             emailMessage.Subject = message.Subject;
-            emailMessage.Body = new TextPart(MimeKit.Text.TextFormat.Text) { Text = message.Content };
-            return emailMessage;
 
+            // Change this line to use HTML format instead of plain text
+            emailMessage.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = message.Content };
+
+            return emailMessage;
         }
+
         private void Send(MimeMessage mailMessage)
         {
-            using(var client = new MailKit.Net.Smtp.SmtpClient())
+            using (var client = new MailKit.Net.Smtp.SmtpClient())
             {
                 try
                 {
@@ -45,9 +48,11 @@ namespace EmailService
                     client.Authenticate(emailConfiguration.UserName, emailConfiguration.Password);
                     client.Send(mailMessage);
                 }
-                catch
+                catch (Exception ex)
                 {
-
+                    // It's better to log the exception instead of ignoring it
+                    // You can add logging here
+                    throw;
                 }
                 finally
                 {
@@ -55,10 +60,6 @@ namespace EmailService
                     client.Dispose();
                 }
             }
-                
-
-
         }
-
     }
 }

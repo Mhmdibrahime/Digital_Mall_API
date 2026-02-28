@@ -6,7 +6,9 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
     {
         public int Id { get; set; }
         [StringLength(100)]
-        public string Name { get; set; }
+        public string EnglishName { get; set; }
+        [StringLength(100)]
+        public string? ArabicName { get; set; }
 
         public int CategoryId { get; set; }
         public Category? Category { get; set; }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.Intrinsics.X86;
 
 namespace Digital_Mall_API.Controllers.SuperAdmin
 {
@@ -37,18 +38,18 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     query = query.Where(c =>
-                        c.Name.Contains(search) ||
+                        c.EnglishName.Contains(search) ||
                         c.Description.Contains(search) ||
-                        c.SubCategories.Any(sc => sc.Name.Contains(search))
+                        c.SubCategories.Any(sc => sc.EnglishName.Contains(search))
                     );
                 }
 
                 var categories = await query
-                    .OrderBy(c => c.Name)
+                    .OrderBy(c => c.EnglishName)
                     .Select(c => new CategoryResponseDto
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Name = c.EnglishName,
                         Description = c.Description,
                         ImageUrl = c.ImageUrl,
                         TotalProducts = c.SubCategories.Sum(sc =>
@@ -56,10 +57,11 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         SubCategories = c.SubCategories.Select(sc => new SubCategoryResponseDto
                         {
                             Id = sc.Id,
-                            Name = sc.Name,
+                            Name = sc.EnglishName,
+                            ArabicName = sc.ArabicName,
                             ImageUrl = sc.ImageUrl,
                             CategoryId = sc.CategoryId,
-                            CategoryName = c.Name,
+                            CategoryName = c.EnglishName,
                             ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
                         }).ToList()
                     })
@@ -84,15 +86,16 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    query = query.Where(sc => sc.Name.Contains(search));
+                    query = query.Where(sc => sc.EnglishName.Contains(search) || sc.ArabicName.Contains(search));
                 }
 
                 var subCategories = await query
-                    .OrderBy(sc => sc.Name)
+                    .OrderBy(sc => sc.EnglishName)
                     .Select(sc => new AvailableSubCategoryDto
                     {
                         Id = sc.Id,
-                        Name = sc.Name,
+                        Name = sc.EnglishName,
+                        ArabicName = sc.ArabicName,
                         ImageUrl = sc.ImageUrl,
                     })
                     .ToListAsync();
@@ -112,11 +115,13 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             {
                 var categories = await _context.Categories
                     .Where(c => c.SubCategories.Any()) 
-                    .OrderBy(c => c.Name)
+                    .OrderBy(c => c.EnglishName)
+                    .ThenBy(c=>c.ArabicName)
                     .Select(c => new
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Name = c.EnglishName,
+                        ArabicName = c.ArabicName,
                         Description = c.Description,
                         ImageUrl = c.ImageUrl,
                         HasSubCategories = c.SubCategories.Any()
@@ -137,7 +142,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             try
             {
                 var existingCategory = await _context.Categories
-                    .FirstOrDefaultAsync(c => c.Name.ToLower() == request.Name.ToLower());
+                    .FirstOrDefaultAsync(c => c.EnglishName.ToLower() == request.Name.ToLower() || c.ArabicName == request.ArabicName);
 
                 if (existingCategory != null)
                 {
@@ -157,7 +162,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
                 var category = new Category
                 {
-                    Name = request.Name,
+                    EnglishName = request.Name,
+                    ArabicName = request.ArabicName,
                     Description = request.Description ?? string.Empty,
                     ImageUrl = imageUrl
                 };
@@ -185,17 +191,19 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     .Select(c => new CategoryResponseDto
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Name = c.EnglishName,
+                        ArabicName = c.ArabicName,
                         Description = c.Description,
                         ImageUrl = c.ImageUrl,
                         
                         SubCategories = c.SubCategories.Select(sc => new SubCategoryResponseDto
                         {
                             Id = sc.Id,
-                            Name = sc.Name,
+                            Name = sc.EnglishName,
+                            ArabicName = sc.ArabicName,
                             ImageUrl = sc.ImageUrl,
                             CategoryId = sc.CategoryId,
-                            CategoryName = c.Name,
+                            CategoryName = c.EnglishName,
                             ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
                         }).ToList(),
                     })
@@ -227,7 +235,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 var existingSubCategory = await _context.SubCategories
                     .FirstOrDefaultAsync(sc =>
                         sc.CategoryId == request.CategoryId &&
-                        sc.Name.ToLower() == request.Name.ToLower());
+                        sc.EnglishName.ToLower() == request.Name.ToLower() || sc.ArabicName.ToLower() == request.ArabicName.ToLower());
 
                 if (existingSubCategory != null)
                 {
@@ -242,7 +250,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
                 var subCategory = new SubCategory
                 {
-                    Name = request.Name,
+                    EnglishName = request.Name,
+                    ArabicName = request.ArabicName,
                     CategoryId = request.CategoryId,
                     ImageUrl = imageUrl
                 };
@@ -256,10 +265,11 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     .Select(sc => new SubCategoryResponseDto
                     {
                         Id = sc.Id,
-                        Name = sc.Name,
+                        Name = sc.EnglishName,
+                        ArabicName = sc.ArabicName,
                         ImageUrl = sc.ImageUrl,
                         CategoryId = sc.CategoryId,
-                        CategoryName = sc.Category.Name,
+                        CategoryName = sc.Category.EnglishName,
                         ProductCount = 0
                     })
                     .FirstOrDefaultAsync();
@@ -287,7 +297,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     .Select(c => new CategoryResponseDto
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Name = c.EnglishName,
+                        ArabicName = c.ArabicName,
                         Description = c.Description,
                         ImageUrl = c.ImageUrl,
                         TotalProducts = c.SubCategories.Sum(sc =>
@@ -295,10 +306,11 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         SubCategories = c.SubCategories.Select(sc => new SubCategoryResponseDto
                         {
                             Id = sc.Id,
-                            Name = sc.Name,
+                            Name = sc.EnglishName,
+                            ArabicName = sc.ArabicName,
                             ImageUrl = sc.ImageUrl,
                             CategoryId = sc.CategoryId,
-                            CategoryName = c.Name,
+                            CategoryName = c.EnglishName,
                             ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
                         }).ToList()
                     })
@@ -332,7 +344,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
                 // Check if name already exists (excluding current category)
                 var existingCategory = await _context.Categories
-                    .FirstOrDefaultAsync(c => c.Name.ToLower() == request.Name.ToLower() && c.Id != id);
+                    .FirstOrDefaultAsync(c => c.EnglishName.ToLower() == request.Name.ToLower() && c.Id != id && c.ArabicName == request.ArabicName);
 
                 if (existingCategory != null)
                 {
@@ -340,7 +352,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 }
 
                 // Update category properties
-                category.Name = request.Name;
+                category.EnglishName = request.Name;
+                category.ArabicName = request.ArabicName;
                 category.Description = request.Description ?? string.Empty;
 
                 // Handle image update if new image is provided
@@ -372,7 +385,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     .Select(c => new CategoryResponseDto
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Name = c.EnglishName,
+                        ArabicName = c.ArabicName,
                         Description = c.Description,
                         ImageUrl = c.ImageUrl,
                         TotalProducts = c.SubCategories.Sum(sc =>
@@ -380,10 +394,11 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         SubCategories = c.SubCategories.Select(sc => new SubCategoryResponseDto
                         {
                             Id = sc.Id,
-                            Name = sc.Name,
+                            Name = sc.EnglishName,
+                            ArabicName = sc.ArabicName,
                             ImageUrl = sc.ImageUrl,
                             CategoryId = sc.CategoryId,
-                            CategoryName = c.Name,
+                            CategoryName = c.EnglishName,
                             ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
                         }).ToList()
                     })
@@ -419,7 +434,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 var existingSubCategory = await _context.SubCategories
                     .FirstOrDefaultAsync(sc =>
                         sc.CategoryId == request.CategoryId &&
-                        sc.Name.ToLower() == request.Name.ToLower() &&
+                        sc.EnglishName.ToLower() == request.Name.ToLower() &&
+                        sc.ArabicName.ToLower() == request.ArabicName.ToLower() &&
                         sc.Id != id);
 
                 if (existingSubCategory != null)
@@ -428,7 +444,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 }
 
                 // Update subcategory properties
-                subCategory.Name = request.Name;
+                subCategory.EnglishName = request.Name;
+                subCategory.ArabicName = request.ArabicName;
                 subCategory.CategoryId = request.CategoryId;
 
                 // Handle image update if new image is provided
@@ -463,10 +480,11 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     .Select(sc => new SubCategoryResponseDto
                     {
                         Id = sc.Id,
-                        Name = sc.Name,
+                        Name = sc.EnglishName,
+                        ArabicName = sc.ArabicName,
                         ImageUrl = sc.ImageUrl,
                         CategoryId = sc.CategoryId,
-                        CategoryName = sc.Category.Name,
+                        CategoryName = sc.Category.EnglishName,
                         ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
                     })
                     .FirstOrDefaultAsync();
@@ -497,10 +515,12 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     .Select(sc => new SubCategoryDetailDto
                     {
                         Id = sc.Id,
-                        Name = sc.Name,
+                        Name = sc.EnglishName,
+                        ArabicName = sc.ArabicName,
                         ImageUrl = sc.ImageUrl,
+
                         CategoryId = sc.CategoryId,
-                        CategoryName = sc.Category.Name,
+                        CategoryName = sc.Category.EnglishName,
                         ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive),
                         HasImage = !string.IsNullOrEmpty(sc.ImageUrl)
                     })

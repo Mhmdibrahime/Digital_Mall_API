@@ -9,6 +9,8 @@
         public string Location { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public int? Age { get; set; }
+        public bool IsCertified { get; set; } 
+
         public string Bio { get; set; }
         public string Status { get; set; }
         public decimal CommissionRate { get; set; }

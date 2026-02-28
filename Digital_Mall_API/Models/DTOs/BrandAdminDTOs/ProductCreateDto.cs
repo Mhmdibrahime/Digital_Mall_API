@@ -11,5 +11,4 @@
         public List<IFormFile>? Images { get; set; }
 
     }
-
 }

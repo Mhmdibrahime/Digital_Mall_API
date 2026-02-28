@@ -62,6 +62,7 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<ReelCommission> ReelCommissions { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
         public DbSet<ProductFeedback> ProductFeedbacks { get; set; }
+        public DbSet<ShippingGovernorate> ShippingGovernorates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -106,7 +107,7 @@ namespace Digital_Mall_API.Models.Data
                 .HasOne(o => o.Customer)
                 .WithMany(c => c.Orders)
                 .HasForeignKey(o => o.CustomerId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.SetNull);
 
             // OrderItem relationships
             modelBuilder.Entity<OrderItem>()
@@ -197,7 +198,7 @@ namespace Digital_Mall_API.Models.Data
                 .HasOne(t => t.CustomerUser)
                 .WithMany()
                 .HasForeignKey(t => t.CustomerUserId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.SetNull);
 
             // TshirtDesignOrderImage relationships
             modelBuilder.Entity<TshirtDesignOrderImage>()
@@ -263,7 +264,7 @@ namespace Digital_Mall_API.Models.Data
                 .HasOne(rt => rt.Customer)
                 .WithMany()
                 .HasForeignKey(rt => rt.CustomerId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.SetNull);
 
             // RefundRequest relationships
             modelBuilder.Entity<RefundRequest>()
@@ -276,7 +277,7 @@ namespace Digital_Mall_API.Models.Data
                 .HasOne(rr => rr.Customer)
                 .WithMany()
                 .HasForeignKey(rr => rr.CustomerId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.SetNull);
 
             // PromoCode relationships
             modelBuilder.Entity<PromoCode>()

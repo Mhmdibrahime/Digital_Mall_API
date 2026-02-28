@@ -18,5 +18,7 @@
         public string Status { get; set; }
         public string RequestDate { get; set; }
         public string AdminNotes { get; set; }
+        public string Address { get; set; }
+        public string phoneNumber { get; set; }
     }
 }

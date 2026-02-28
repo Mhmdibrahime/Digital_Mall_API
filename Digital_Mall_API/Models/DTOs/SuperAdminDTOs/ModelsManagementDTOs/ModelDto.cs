@@ -7,7 +7,8 @@
         public string Bio { get; set; }
         public string Status { get; set; }
         public string Email { get; set; }
-        
+        public bool IsCertified { get; set; }
+
         public decimal CommissionRate { get; set; }
         public DateTime CreatedAt { get; set; }
         public int ReelsCount { get; set; }

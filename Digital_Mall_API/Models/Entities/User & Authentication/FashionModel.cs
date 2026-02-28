@@ -14,6 +14,7 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
         
         [StringLength(500)]
         public string? Bio { get; set; }
+        public bool IsCertified { get; set; } = false;
 
         [StringLength(200)]
         public string? Facebook { get; set; }

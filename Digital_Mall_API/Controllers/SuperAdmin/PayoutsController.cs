@@ -81,7 +81,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     Amount = payout.Amount,
                     Status = payout.Status,
                     RequestDate = payout.RequestDate,
-                    BankAccount = payout.BankAccountNumber
+                    BankAccount = payout.BankAccountNumber,
+                    PaymentMethod = payout.Method
+
                 });
             }
 
@@ -110,7 +112,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     Amount = payout.Amount,
                     Status = payout.Status,
                     RequestDate = payout.RequestDate,
-                    BankAccount = payout.BankAccountNumber
+                    BankAccount = payout.BankAccountNumber,
+                    PaymentMethod = payout.Method
+
                 });
             }
 
@@ -140,7 +144,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     Status = payout.Status,
                     RequestDate = payout.RequestDate,
                     ProcessedDate = payout.ProcessedDate,
-                    BankAccount = payout.BankAccountNumber
+                    BankAccount = payout.BankAccountNumber,
+                    PaymentMethod = payout.Method
+
                 });
             }
 
@@ -170,7 +176,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     Status = payout.Status,
                     RequestDate = payout.RequestDate,
                     ProcessedDate = payout.ProcessedDate,
-                    BankAccount = payout.BankAccountNumber
+                    BankAccount = payout.BankAccountNumber,
+                    PaymentMethod = payout.Method
+
                 });
             }
 
@@ -201,7 +209,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 Status = payout.Status,
                 RequestDate = payout.RequestDate,
                 ProcessedDate = payout.ProcessedDate,
-                BankAccount = payout.BankAccountNumber
+                BankAccount = payout.BankAccountNumber,
+                PaymentMethod = payout.Method
+
             };
 
             return Ok(payoutDetails);

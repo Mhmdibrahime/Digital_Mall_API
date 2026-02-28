@@ -17,8 +17,7 @@ namespace Digital_Mall_API.Models.Entities.Orders___Shopping
         [Required]
         public int OrderItemId { get; set; }
 
-        [Required]
-        public string CustomerId { get; set; }
+        public string? CustomerId { get; set; }
 
         [Required]
         [StringLength(1000)]
@@ -41,6 +40,6 @@ namespace Digital_Mall_API.Models.Entities.Orders___Shopping
 
         public virtual Order Order { get; set; }
         public virtual OrderItem OrderItem { get; set; }
-        public virtual Customer Customer { get; set; }
+        public virtual Customer? Customer { get; set; }
     }
 }

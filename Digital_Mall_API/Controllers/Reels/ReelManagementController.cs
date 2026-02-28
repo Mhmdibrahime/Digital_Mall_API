@@ -18,24 +18,42 @@ namespace Digital_Mall_API.Controllers.Reels
     {
         private readonly AppDbContext _context;
         private readonly IMuxService _muxService;
+        private readonly IVimeoService _vimeoService;
         private readonly ILogger<ReelManagementController> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public ReelManagementController(
             AppDbContext context,
             IMuxService muxService,
+            IVimeoService vimeoService,
             ILogger<ReelManagementController> logger,
             UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _muxService = muxService;
+            _vimeoService = vimeoService;
             _logger = logger;
             _userManager = userManager;
         }
 
-        [HttpPost("prepare-upload")]
+        // Keep existing Mux method
+        [HttpPost("prepare-upload/mux")]
         [Authorize]
-        public async Task<ActionResult<ReelUploadResponse>> PrepareReelUpload([FromBody] PrepareReelUploadRequest request)
+        public async Task<ActionResult<ReelUploadResponse>> PrepareReelUploadMux([FromBody] PrepareReelUploadRequest request)
+        {
+            // Your existing Mux code here...
+            return await PrepareReelUpload(request, "mux");
+        }
+
+        // NEW: Vimeo upload method
+        [HttpPost("prepare-upload/vimeo")]
+        [Authorize]
+        public async Task<ActionResult<ReelUploadResponse>> PrepareReelUploadVimeo([FromBody] PrepareReelUploadRequest request)
+        {
+            return await PrepareReelUpload(request, "vimeo");
+        }
+
+        private async Task<ActionResult<ReelUploadResponse>> PrepareReelUpload(PrepareReelUploadRequest request, string provider)
         {
             try
             {
@@ -86,7 +104,7 @@ namespace Digital_Mall_API.Controllers.Reels
                 };
 
                 _context.Reels.Add(reel);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(); // Save to get the ID
 
                 if (request.LinkedProductIds?.Any() == true)
                 {
@@ -115,32 +133,384 @@ namespace Digital_Mall_API.Controllers.Reels
                     await _context.SaveChangesAsync();
                 }
 
-                var origin = Request.Headers.Origin.FirstOrDefault() ?? "*";
-                var muxResponse = await _muxService.CreateDirectUploadAsync(reel.Id, origin);
+                if (provider == "mux")
+                {
+                    var origin = Request.Headers.Origin.FirstOrDefault() ?? "*";
+                    var muxResponse = await _muxService.CreateDirectUploadAsync(reel.Id, origin);
 
-                reel.MuxUploadId = muxResponse.Data.Id;
-                reel.UploadStatus = "uploading";
+                    reel.MuxUploadId = muxResponse.Data.Id;
+                    reel.UploadStatus = "uploading";
+
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation("User {UserId} ({UserType}) created Mux reel {ReelId}", user.Id, userType, reel.Id);
+
+                    return Ok(new ReelUploadResponse
+                    {
+                        ReelId = reel.Id,
+                        UploadUrl = muxResponse.Data.Url,
+                        UploadStatus = reel.UploadStatus,
+                        PostedByUserType = userType,
+                        Provider = "mux"
+                    });
+                }
+                else // vimeo
+                {
+                    var vimeoResponse = await _vimeoService.CreateVideoUploadAsync(reel.Id);
+
+                    reel.VimeoVideoId = vimeoResponse.VideoId;
+                    reel.VimeoUploadUrl = vimeoResponse.UploadUrl;
+                    reel.UploadStatus = "uploading";
+
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation("User {UserId} ({UserType}) created Vimeo reel {ReelId}", user.Id, userType, reel.Id);
+
+                    return Ok(new ReelUploadResponse
+                    {
+                        ReelId = reel.Id,
+                        UploadUrl = vimeoResponse.UploadUrl,
+                        UploadStatus = reel.UploadStatus,
+                        PostedByUserType = userType,
+                        Provider = "vimeo",
+                        AdditionalData = new
+                        {
+                            vimeoVideoId = vimeoResponse.VideoId,
+                            vimeoUri = vimeoResponse.Uri,
+                            formHtml = vimeoResponse.Upload?.Form
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error preparing {Provider} upload for user {UserId}",
+                    provider, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { error = $"Failed to prepare {provider} upload" });
+            }
+        }
+        // POST: api/reels/{reelId}/complete-upload
+        [HttpPost("{reelId}/complete-upload")]
+        [Authorize]
+        public async Task<ActionResult<object>> CompleteReelUpload(int reelId)
+        {
+            try
+            {
+                // Get the reel
+                var reel = await _context.Reels
+                    .Where(r => r.Id == reelId)
+                    .FirstOrDefaultAsync();
+
+                if (reel == null)
+                {
+                    return NotFound(new { error = "Reel not found" });
+                }
+
+                // Check if user owns this reel
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (reel.PostedByUserId != userId)
+                {
+                    return Forbid("You don't own this reel");
+                }
+
+                // Check if already completed
+                if (reel.UploadStatus == "ready")
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Reel is already marked as ready",
+                        reel = new
+                        {
+                            reel.Id,
+                            reel.Caption,
+                            reel.VideoUrl,
+                            reel.ThumbnailUrl,
+                            reel.DurationInSeconds,
+                            reel.UploadStatus,
+                            reel.PostedByUserType
+                        }
+                    });
+                }
+
+                // Check if we have Vimeo video ID
+                if (string.IsNullOrEmpty(reel.VimeoVideoId))
+                {
+                    return BadRequest(new
+                    {
+                        error = "No Vimeo video associated with this reel",
+                        suggestion = "Please upload a video first using the upload URL"
+                    });
+                }
+
+                // ✅ CRITICAL: Create the player embed URL from Vimeo video ID
+                string playerEmbedUrl = $"https://player.vimeo.com/video/{reel.VimeoVideoId}";
+
+                // Update reel with final details
+                reel.UploadStatus = "ready";
+                reel.VideoUrl = playerEmbedUrl; // Use player embed URL for playback
+                reel.VimeoPlayerUrl = playerEmbedUrl; // Store separately if needed
+
+                // Set a default thumbnail if none exists
+                if (reel.ThumbnailUrl == "pending" || string.IsNullOrEmpty(reel.ThumbnailUrl))
+                {
+                    reel.ThumbnailUrl = $"https://i.vimeocdn.com/video/{reel.VimeoVideoId}_640.jpg";
+                }
+
+
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User {UserId} ({UserType}) created reel {ReelId}", user.Id, userType, reel.Id);
-
-                return Ok(new ReelUploadResponse
+                return Ok(new
                 {
-                    ReelId = reel.Id,
-                    UploadUrl = muxResponse.Data.Url,
-                    UploadStatus = reel.UploadStatus,
-                    PostedByUserType = userType
+                    success = true,
+                    reel = new
+                    {
+                        reel.Id,
+                        reel.Caption,
+                        reel.VideoUrl,
+                        reel.ThumbnailUrl,
+                        reel.DurationInSeconds,
+                        reel.UploadStatus,
+                        reel.PostedByUserType,
+                        vimeoVideoId = reel.VimeoVideoId,
+                        vimeoPlayerUrl = reel.VimeoPlayerUrl,
+                        
+                    },
+                    message = "Reel upload completed successfully"
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error preparing reel upload for user {UserId}",
-                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-                return StatusCode(500, new { error = "Failed to prepare upload" });
+                _logger.LogError(ex, "Error completing upload for reel {ReelId}", reelId);
+                return StatusCode(500, new { error = "Failed to complete upload" });
             }
         }
+        // GET: api/reels/{reelId}/check-vimeo-status
+        [HttpGet("{reelId}/check-vimeo-status")]
+        [Authorize]
+        public async Task<ActionResult<object>> CheckVimeoStatus(int reelId)
+        {
+            try
+            {
+                var reel = await _context.Reels
+                    .Where(r => r.Id == reelId )
+                    .FirstOrDefaultAsync();
 
-        [HttpGet("products/search")]
+                if (reel == null)
+                {
+                    return NotFound(new { error = "Reel not found" });
+                }
+
+                // Check if user owns this reel
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (reel.PostedByUserId != userId)
+                {
+                    return Forbid("You don't own this reel");
+                }
+
+                if (string.IsNullOrEmpty(reel.VimeoVideoId))
+                {
+                    return BadRequest(new { error = "No Vimeo video associated with this reel" });
+                }
+
+                // Return the Vimeo video ID and player URL
+                return Ok(new
+                {
+                    success = true,
+                    vimeo_video_id = reel.VimeoVideoId,
+                    player_embed_url = $"https://player.vimeo.com/video/{reel.VimeoVideoId}",
+                    reel_status = reel.UploadStatus,
+                    can_complete = reel.UploadStatus != "ready",
+                    message = reel.UploadStatus == "ready"
+                        ? "Reel is already ready"
+                        : "Reel can be marked as ready"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking Vimeo status for reel {ReelId}", reelId);
+                return StatusCode(500, new { error = "Failed to check Vimeo status" });
+            }
+        }
+        // Add provider field to response
+        public class ReelUploadResponse
+        {
+            public int ReelId { get; set; }
+            public string UploadUrl { get; set; }
+            public string UploadStatus { get; set; }
+            public string PostedByUserType { get; set; }
+            public string Provider { get; set; } = "mux"; // Default to mux for backward compatibility
+            public object AdditionalData { get; set; }
+        }
+
+        // Update GetReelDetails to include Vimeo info
+        [HttpGet("{reelId}/details")]
+        [Authorize]
+        public async Task<ActionResult<ReelDetailDto>> GetReelDetails(int reelId)
+        {
+            var reel = await _context.Reels
+                .Include(r => r.LinkedProducts)
+                    .ThenInclude(rp => rp.Product)
+                .Include(r => r.PostedByModel)
+                .Include(r => r.PostedByBrand)
+                .FirstOrDefaultAsync(r => r.Id == reelId);
+
+            if (reel == null)
+                return NotFound(new { error = "Reel not found" });
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRoles = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value);
+
+            var isOwner = reel.PostedByUserId == userId;
+
+            if (!isOwner)
+                return Forbid("You don't have permission to view this reel");
+
+            // Determine provider
+            string provider = !string.IsNullOrEmpty(reel.VimeoVideoId) ? "vimeo" : "mux";
+
+            var reelDetails = new ReelDetailDto
+            {
+                Id = reel.Id,
+                Caption = reel.Caption,
+                VideoUrl = reel.VideoUrl,
+                ThumbnailUrl = reel.ThumbnailUrl,
+                PostedDate = reel.PostedDate,
+                DurationInSeconds = reel.DurationInSeconds,
+                LikesCount = reel.LikesCount,
+                SharesCount = reel.SharesCount,
+                UploadStatus = reel.UploadStatus,
+                PostedByUserType = reel.PostedByUserType,
+                PostedByName = reel.PostedByUserType == "FashionModel"
+                    ? reel.PostedByModel.Name
+                    : reel.PostedByBrand.OfficialName,
+                LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDetailDto
+                {
+                    ProductId = rp.ProductId,
+                    ProductName = rp.Product.Name,
+                    ProductPrice = rp.Product.Price,
+                    ProductDescription = rp.Product.Description,
+                    ProductImageUrl = rp.Product.Images.FirstOrDefault()?.ImageUrl
+                }).ToList(),
+                Provider = provider,
+                MuxAssetId = reel.MuxAssetId,
+                MuxPlaybackId = reel.MuxPlaybackId,
+                VimeoVideoId = reel.VimeoVideoId,
+                VimeoPlayerUrl = reel.VimeoPlayerUrl,
+                UploadError = reel.UploadError
+            };
+
+            return Ok(reelDetails);
+        }
+
+        // Update GetUploadStatus to include Vimeo
+        [HttpGet("{reelId}/upload-status")]
+        public async Task<ActionResult<ReelUploadStatusResponse>> GetUploadStatus(int reelId)
+        {
+            var reel = await _context.Reels
+                .Include(r => r.LinkedProducts)
+                    .ThenInclude(rp => rp.Product)
+                .FirstOrDefaultAsync(r => r.Id == reelId);
+
+            if (reel == null) return NotFound();
+
+            string provider = !string.IsNullOrEmpty(reel.VimeoVideoId) ? "vimeo" : "mux";
+
+            return Ok(new ReelUploadStatusResponse
+            {
+                ReelId = reel.Id,
+                UploadStatus = reel.UploadStatus,
+                Provider = provider,
+                MuxAssetId = reel.MuxAssetId,
+                MuxPlaybackId = reel.MuxPlaybackId,
+                VimeoVideoId = reel.VimeoVideoId,
+                VimeoPlayerUrl = reel.VimeoPlayerUrl,
+                VideoUrl = reel.VideoUrl,
+                ThumbnailUrl = reel.ThumbnailUrl,
+                Error = reel.UploadError,
+                PostedByUserType = reel.PostedByUserType
+            });
+        }
+
+        // Add Vimeo-specific cancellation
+        [HttpPost("{reelId}/cancel-upload/vimeo")]
+        [Authorize]
+        public async Task<ActionResult> CancelVimeoUpload(int reelId)
+        {
+            var reel = await _context.Reels.FindAsync(reelId);
+            if (reel == null) return NotFound();
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (reel.PostedByUserId != userId)
+                return Forbid("You can only cancel your own uploads");
+
+            if (reel.UploadStatus == "ready")
+                return BadRequest(new { error = "Cannot cancel - upload already completed" });
+
+            // Delete video from Vimeo if it exists
+            if (!string.IsNullOrEmpty(reel.VimeoVideoId))
+            {
+                try
+                {
+                    await _vimeoService.DeleteVideoAsync(reel.VimeoVideoId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to delete Vimeo video {VideoId}", reel.VimeoVideoId);
+                }
+            }
+
+            reel.UploadStatus = "cancelled";
+            reel.VimeoVideoId = null;
+            reel.VimeoUploadUrl = null;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Vimeo upload cancelled" });
+        }
+    
+
+    // Update ReelUploadStatusResponse
+    public class ReelUploadStatusResponse
+    {
+        public int ReelId { get; set; }
+        public string UploadStatus { get; set; }
+        public string Provider { get; set; }
+        public string? MuxAssetId { get; set; }
+        public string? MuxPlaybackId { get; set; }
+        public string? VimeoVideoId { get; set; }
+        public string? VimeoPlayerUrl { get; set; }
+        public string VideoUrl { get; set; }
+        public string ThumbnailUrl { get; set; }
+        public string? Error { get; set; }
+        public string PostedByUserType { get; set; }
+    }
+
+    // Update ReelDetailDto
+    public class ReelDetailDto
+    {
+        public int Id { get; set; }
+        public string? Caption { get; set; }
+        public string VideoUrl { get; set; }
+        public string ThumbnailUrl { get; set; }
+        public DateTime PostedDate { get; set; }
+        public int DurationInSeconds { get; set; }
+        public int LikesCount { get; set; }
+        public int SharesCount { get; set; }
+        public int ViewsCount { get; set; }
+        public string UploadStatus { get; set; }
+        public string PostedByUserType { get; set; }
+        public string PostedByName { get; set; }
+        public string Provider { get; set; }
+        public List<ReelProductDetailDto> LinkedProducts { get; set; } = new();
+        public string? MuxAssetId { get; set; }
+        public string? MuxPlaybackId { get; set; }
+        public string? VimeoVideoId { get; set; }
+        public string? VimeoPlayerUrl { get; set; }
+        public string? UploadError { get; set; }
+    }
+
+
+[HttpGet("products/search")]
         [Authorize]
         public async Task<ActionResult<List<ProductSearchDto>>> SearchProducts(
     [FromQuery] string? search = null,
@@ -312,58 +682,7 @@ namespace Digital_Mall_API.Controllers.Reels
             return Ok(response);
         }
 
-        [HttpGet("{reelId}/details")]
-        [Authorize]
-        public async Task<ActionResult<ReelDetailDto>> GetReelDetails(int reelId)
-        {
-            var reel = await _context.Reels
-                .Include(r => r.LinkedProducts)
-                    .ThenInclude(rp => rp.Product)
-                .Include(r => r.PostedByModel)
-                .Include(r => r.PostedByBrand)
-                .FirstOrDefaultAsync(r => r.Id == reelId);
-
-            if (reel == null)
-                return NotFound(new { error = "Reel not found" });
-
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userRoles = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value);
-
-            var isOwner = reel.PostedByUserId == userId;
-
-            if (!isOwner)
-                return Forbid("You don't have permission to view this reel");
-
-            var reelDetails = new ReelDetailDto
-            {
-                Id = reel.Id,
-                Caption = reel.Caption,
-                VideoUrl = reel.VideoUrl,
-                ThumbnailUrl = reel.ThumbnailUrl,
-                PostedDate = reel.PostedDate,
-                DurationInSeconds = reel.DurationInSeconds,
-                LikesCount = reel.LikesCount,
-                SharesCount = reel.SharesCount,
-                UploadStatus = reel.UploadStatus,
-                PostedByUserType = reel.PostedByUserType,
-                PostedByName = reel.PostedByUserType == "FashionModel"
-                    ? reel.PostedByModel.Name
-                    : reel.PostedByBrand.OfficialName,
-                LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDetailDto
-                {
-                    ProductId = rp.ProductId,
-                    ProductName = rp.Product.Name,
-                    ProductPrice = rp.Product.Price,
-                    ProductDescription = rp.Product.Description,
-                    ProductImageUrl = rp.Product.Images.FirstOrDefault()?.ImageUrl
-                }).ToList(),
-                MuxAssetId = reel.MuxAssetId,
-                MuxPlaybackId = reel.MuxPlaybackId,
-                UploadError = reel.UploadError
-            };
-
-            return Ok(reelDetails);
-        }
+        
 
         [HttpDelete("{reelId}")]
         [Authorize]
@@ -424,28 +743,7 @@ namespace Digital_Mall_API.Controllers.Reels
             return Ok(new { message = $"Reel status updated to {request.Status}" });
         }
 
-        [HttpGet("{reelId}/upload-status")]
-        public async Task<ActionResult<ReelUploadStatusResponse>> GetUploadStatus(int reelId)
-        {
-            var reel = await _context.Reels
-                .Include(r => r.LinkedProducts)
-                    .ThenInclude(rp => rp.Product)
-                .FirstOrDefaultAsync(r => r.Id == reelId);
-
-            if (reel == null) return NotFound();
-
-            return Ok(new ReelUploadStatusResponse
-            {
-                ReelId = reel.Id,
-                UploadStatus = reel.UploadStatus,
-                MuxAssetId = reel.MuxAssetId,
-                MuxPlaybackId = reel.MuxPlaybackId,
-                VideoUrl = reel.VideoUrl,
-                ThumbnailUrl = reel.ThumbnailUrl,
-                Error = reel.UploadError,
-                PostedByUserType = reel.PostedByUserType
-            });
-        }
+       
 
         [HttpPost("{reelId}/cancel-upload")]
         [Authorize]

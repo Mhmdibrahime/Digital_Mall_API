@@ -24,7 +24,11 @@ namespace Digital_Mall_API
             }
 
             var builder = WebApplication.CreateBuilder(args);
-
+            builder.Services.AddHttpClient<IVimeoService, VimeoService>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.vimeo.com/");
+                client.DefaultRequestHeaders.Add("Accept", "application/vnd.vimeo.*+json;version=3.4");
+            });
             builder.Services.AddControllers();
 
             var email = builder.Configuration
@@ -49,7 +53,9 @@ namespace Digital_Mall_API
             });
             builder.Services.AddScoped<IEmailSender, EmailSender>();
 
+            // Keep existing Mux service
             builder.Services.AddScoped<IMuxService, MuxService>();
+            builder.Services.AddScoped<IVimeoService, VimeoService>();
             builder.Services.AddScoped<IPaymobService, PaymobService>();
             builder.Services.AddHttpClient<IPaymobService, PaymobService>();
 
@@ -213,11 +219,25 @@ namespace Digital_Mall_API
 
             app.UseStaticFiles();
             app.UseRouting();
+            //app.Use(async (context, next) =>
+            //{
+            //    try
+            //    {
+            //        await next();
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        context.Response.StatusCode = 500;
+            //        await context.Response.WriteAsync($"Error: {ex.Message}\n\n{ex.StackTrace}");
+            //    }
+            //});
 
             app.UseCors("AllowAll");
             app.UseHttpsRedirection();
 
             app.UseAuthentication();
+            
+
             app.UseAuthorization();
 
             app.MapControllers();

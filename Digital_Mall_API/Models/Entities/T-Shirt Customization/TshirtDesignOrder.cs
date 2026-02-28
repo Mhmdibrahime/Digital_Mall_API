@@ -10,8 +10,7 @@ public class TshirtDesignOrder
 {
     public int Id { get; set; }
 
-    [Required]
-    public string CustomerUserId { get; set; }
+    public string? CustomerUserId { get; set; }
 
     [Required]
     [StringLength(50)]

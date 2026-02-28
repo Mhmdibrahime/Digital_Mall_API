@@ -101,12 +101,14 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 {
                     Id = b.Id,
                     OfficialName = b.OfficialName,
+                    PhoneNumber = b.PhoneNumber,
                     Description = b.Description,
                     LogoUrl = b.LogoUrl,
                     Status = b.Status,
                     CommissionRate = b.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate,
                     CreatedAt = b.CreatedAt,
                     ProductsCount = b.Products.Count,
+                    IsCertified = b.IsCertified,
                     OrdersCount = _context.OrderItems
                 .Count(oi => oi.BrandId == b.Id &&
                              (oi.Order.Status == "Completed" || oi.Order.Status == "Delivered"))
@@ -136,7 +138,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     OfficialName = b.OfficialName,
                     Description = b.Description,
                     Email = user.Email,
-                    Phone = user.PhoneNumber,
+                    IsCertified = b.IsCertified,
+                    Phone = b.PhoneNumber,
                     LogoUrl = b.LogoUrl,
                     CommercialRegistrationNumber = b.CommercialRegistrationNumber,
                     TaxCardNumber = b.TaxCardNumber,
@@ -179,6 +182,25 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
             return Ok(new { Message = "Brand status updated successfully" });
         }
+        [HttpPut("{id}/UpdateBrandCertification")]
+        public async Task<IActionResult> UpdateBrandCertificationStatus(Guid id)
+        {
+            var brand = await _context.Brands.FindAsync(id.ToString());
+            if (brand == null)
+            {
+                return NotFound();
+            }
+            if (brand.IsCertified)
+            {
+                brand.IsCertified = false;
+            }
+            else
+            {
+                brand.IsCertified = true;
+            }
+            await _context.SaveChangesAsync();
+            return Ok(new { Message = "Brand certification status updated successfully" });
+        }
 
         [HttpPut("{id}/EditCommission")]
         public async Task<IActionResult> UpdateCommissionRate(Guid id, [FromBody] decimal commissionRate)
@@ -211,16 +233,42 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 return NotFound("Brand or associated user not found.");
             }
 
-            
+            // Check for associated products
             var hasProducts = await _context.Products.AnyAsync(p => p.BrandId == id.ToString());
 
-            
+            // Check for associated orders
             var hasOrders = await _context.OrderItems
                 .AnyAsync(oi => oi.BrandId == id.ToString());
 
-            if (hasProducts || hasOrders)
+            // Check for associated payouts
+            var hasPayouts = await _context.Payouts
+                .AnyAsync(p => p.PayeeUserId == id);
+
+            // Check for associated promo codes
+            var hasPromoCodes = await _context.PromoCodes
+                .AnyAsync(pc => pc.BrandId == id.ToString());
+
+            // Check for associated product discounts
+            var hasProductDiscounts = await _context.ProductDiscounts
+                .AnyAsync(pd => pd.BrandId == id.ToString());
+
+            // Check for associated reels
+            var hasReels = await _context.Reels
+                .AnyAsync(r => r.PostedByBrandId == id.ToString());
+
+            if (hasProducts || hasOrders || hasPayouts || hasPromoCodes || hasProductDiscounts || hasReels)
             {
-                return BadRequest("Cannot delete brand with associated products or orders.");
+                var dependencies = new List<string>();
+
+                if (hasProducts) dependencies.Add("products");
+                if (hasOrders) dependencies.Add("orders");
+                if (hasPayouts) dependencies.Add("payouts");
+                if (hasPromoCodes) dependencies.Add("promo codes");
+                if (hasProductDiscounts) dependencies.Add("product discounts");
+                if (hasReels) dependencies.Add("reels");
+                brand.Status = "Suspended";
+                await _context.SaveChangesAsync();
+                return BadRequest($"Brand Suspended due to associated with {string.Join(", ", dependencies)}.");
             }
 
             _context.Brands.Remove(brand);

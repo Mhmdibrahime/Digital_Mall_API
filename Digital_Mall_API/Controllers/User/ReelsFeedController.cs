@@ -37,6 +37,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     .Include(r => r.PostedByBrand)
                     .Include(r => r.LinkedProducts)
                         .ThenInclude(rp => rp.Product)
+                        
                         .ThenInclude(p => p.Images)
                     .AsQueryable();
 
@@ -83,13 +84,17 @@ namespace Digital_Mall_API.Controllers.Reels
 
                     PostedByUserType = reel.PostedByUserType,
                     PostedByUserId = reel.PostedByUserId,
+
                     PostedByName = reel.PostedByUserType == "FashionModel"
                         ? reel.PostedByModel.Name
                         : reel.PostedByBrand.OfficialName,
+                    PostedByUserIsCertified = reel.PostedByUserType == "FashionModel"
+                        ? reel.PostedByModel.IsCertified
+                        : reel.PostedByBrand.IsCertified,
                     PostedByImage = reel.PostedByUserType == "FashionModel"
                         ? reel.PostedByModel.ImageUrl
                         : reel.PostedByBrand.LogoUrl,
-                    LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
+                    LinkedProducts = reel.LinkedProducts.Where(p=>p.Product.IsActive == true).Select(rp => new ReelProductDto
                     {
                         ProductId = rp.ProductId,
                         ProductName = rp.Product.Name,
@@ -172,10 +177,13 @@ namespace Digital_Mall_API.Controllers.Reels
                     PostedByName = reel.PostedByUserType == "FashionModel"
                         ? reel.PostedByModel.Name
                         : reel.PostedByBrand.OfficialName,
+                    PostedByUserIsCertified = reel.PostedByUserType == "FashionModel"
+                        ? reel.PostedByModel.IsCertified
+                        : reel.PostedByBrand.IsCertified,
                     PostedByImage = reel.PostedByUserType == "FashionModel"
                         ? reel.PostedByModel.ImageUrl
                         : reel.PostedByBrand.LogoUrl,
-                    LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
+                    LinkedProducts = reel.LinkedProducts.Where(p=>p.Product.IsActive == true).Select(rp => new ReelProductDto
                     {
                         ProductId = rp.ProductId,
                         ProductName = rp.Product.Name,
@@ -504,7 +512,7 @@ namespace Digital_Mall_API.Controllers.Reels
                     PostedByImage = reel.PostedByUserType == "FashionModel"
                         ? reel.PostedByModel.ImageUrl
                         : reel.PostedByBrand.LogoUrl,
-                    LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
+                    LinkedProducts = reel.LinkedProducts.Where(p=>p.Product.IsActive == true).Select(rp => new ReelProductDto
                     {
                         ProductId = rp.ProductId,
                         ProductName = rp.Product.Name,
@@ -572,7 +580,11 @@ namespace Digital_Mall_API.Controllers.Reels
                 }
 
                 var count = await _context.SavedReels
-                    .Where(sr => sr.CustomerId == customerId)
+                    .Include(Reel => Reel.Reel)
+                    .ThenInclude(r => r.PostedByModel)
+                    .Include(Reel => Reel.Reel)
+                    .ThenInclude(r => r.PostedByBrand)
+                    .Where(sr => sr.CustomerId == customerId && sr.Reel.UploadStatus == "ready" && (sr.Reel.PostedByModel.Status == "Active" || sr.Reel.PostedByBrand.Status == "Active"))
                     .CountAsync();
 
                 return Ok(new SavedReelsCountResponse

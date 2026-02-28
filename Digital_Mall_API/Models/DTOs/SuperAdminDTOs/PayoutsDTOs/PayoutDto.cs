@@ -11,5 +11,6 @@
         public DateTime RequestDate { get; set; }
         public DateTime? ProcessedDate { get; set; }
         public string BankAccount { get; set; }
+        public string PaymentMethod { get; set; }
     }
 }

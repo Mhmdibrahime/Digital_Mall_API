@@ -20,14 +20,16 @@ namespace Digital_Mall_API.Controllers.User
         }
         [HttpGet("search")]
         public async Task<IActionResult> Search(
-    [FromQuery] string q, 
-    [FromQuery] string? type,
-    [FromQuery] string? gender,
-    [FromQuery] string? size,
-    [FromQuery] decimal? minPrice,
-    [FromQuery] decimal? maxPrice,
-    [FromQuery] string? sort,
-    [FromQuery] int page = 1)
+    [FromQuery] string q,
+    [FromQuery] string type = "all",
+    [FromQuery] string? gender = null,
+    [FromQuery] string? size = null,
+    [FromQuery] decimal? minPrice =null,
+    [FromQuery] decimal? maxPrice = null,
+    [FromQuery] string sort = null,
+    [FromQuery] int page = 1,
+     [FromQuery] int PageSize = 20
+    )
         {
             if (string.IsNullOrWhiteSpace(q))
                 return BadRequest(new { message = "Search query is required" });
@@ -35,6 +37,8 @@ namespace Digital_Mall_API.Controllers.User
             if (page < 1) page = 1;
 
             var searchTerm = q.Trim().ToLower();
+            var searchType = (type ?? "products").ToLower();
+
             var results = new
             {
                 Products = new List<object>(),
@@ -42,7 +46,8 @@ namespace Digital_Mall_API.Controllers.User
                 Models = new List<object>()
             };
 
-            if (string.IsNullOrEmpty(type) || type?.ToLower() == "products")
+            // SEARCH PRODUCTS (if type is "all" or "products")
+            if (searchType == "all" || searchType == "products")
             {
                 var productQuery = _context.Products
                     .Include(p => p.Brand)
@@ -55,8 +60,8 @@ namespace Digital_Mall_API.Controllers.User
                                (p.Name.ToLower().Contains(searchTerm) ||
                                 p.Description.ToLower().Contains(searchTerm) ||
                                 p.Brand.OfficialName.ToLower().Contains(searchTerm) ||
-                                p.SubCategory.Name.ToLower().Contains(searchTerm) ||
-                                p.SubCategory.Category.Name.ToLower().Contains(searchTerm)))
+                                p.SubCategory.EnglishName.ToLower().Contains(searchTerm) || p.SubCategory.ArabicName.Contains(searchTerm) ||
+                                p.SubCategory.Category.EnglishName.ToLower().Contains(searchTerm) || p.SubCategory.Category.ArabicName.Contains(searchTerm)))
                     .AsQueryable();
 
                 // Apply filters for products
@@ -89,7 +94,7 @@ namespace Digital_Mall_API.Controllers.User
                 var products = await productQuery
                     .Skip((page - 1) * PageSize)
                     .Take(PageSize)
-                    .Select(p => new DiscountedProductDto
+                    .Select(p => new
                     {
                         Id = p.Id,
                         Name = p.Name,
@@ -99,8 +104,8 @@ namespace Digital_Mall_API.Controllers.User
                         OriginalPrice = p.Price,
                         DiscountValue = p.ProductDiscount != null ? p.ProductDiscount.DiscountValue : 0,
                         DiscountedPrice = p.ProductDiscount != null
-                        ? p.Price - (p.Price * p.ProductDiscount.DiscountValue / 100)
-                        : p.Price,
+                            ? p.Price - (p.Price * p.ProductDiscount.DiscountValue / 100)
+                            : p.Price,
                         DiscountStatus = p.ProductDiscount != null ? "Active" : "None",
                         CreatedAt = p.CreatedAt,
                         StockQuantity = p.Variants.Sum(v => v.StockQuantity)
@@ -117,14 +122,19 @@ namespace Digital_Mall_API.Controllers.User
                 });
             }
 
-            // Search Brands
-            if (string.IsNullOrEmpty(type) || type?.ToLower() == "brands")
+            // SEARCH BRANDS (if type is "all" or "brands")
+            if (searchType == "all" || searchType == "brands")
             {
-                var brands = await _context.Brands
+                var brandQuery = _context.Brands
                     .Where(b => b.Status == "Active" &&
                                (b.OfficialName.ToLower().Contains(searchTerm) ||
                                 b.Description.ToLower().Contains(searchTerm)))
-                    .OrderBy(b => b.OfficialName)
+                    .OrderBy(b => b.OfficialName);
+
+                var brandTotalItems = await brandQuery.CountAsync();
+                var brands = await brandQuery
+                    .Skip((page - 1) * PageSize)
+                    .Take(PageSize)
                     .Select(b => new
                     {
                         b.Id,
@@ -136,17 +146,29 @@ namespace Digital_Mall_API.Controllers.User
                     })
                     .ToListAsync();
 
-                results.Brands.AddRange(brands);
+                results.Brands.Add(new
+                {
+                    page,
+                    pageSize = PageSize,
+                    totalItems = brandTotalItems,
+                    totalPages = (int)Math.Ceiling(brandTotalItems / (double)PageSize),
+                    items = brands
+                });
             }
 
-            // Search Models (Fashion Models)
-            if (string.IsNullOrEmpty(type) || type?.ToLower() == "models")
+            // SEARCH MODELS (if type is "all" or "models")
+            if (searchType == "all" || searchType == "models")
             {
-                var models = await _context.FashionModels
+                var modelQuery = _context.FashionModels
                     .Where(m => m.Status == "Active" &&
                                (m.Name.ToLower().Contains(searchTerm) ||
                                 m.Bio.ToLower().Contains(searchTerm)))
-                    .OrderBy(m => m.Name)
+                    .OrderBy(m => m.Name);
+
+                var modelTotalItems = await modelQuery.CountAsync();
+                var models = await modelQuery
+                    .Skip((page - 1) * PageSize)
+                    .Take(PageSize)
                     .Select(m => new
                     {
                         m.Id,
@@ -161,13 +183,22 @@ namespace Digital_Mall_API.Controllers.User
                     })
                     .ToListAsync();
 
-                results.Models.AddRange(models);
+                results.Models.Add(new
+                {
+                    page,
+                    pageSize = PageSize,
+                    totalItems = modelTotalItems,
+                    totalPages = (int)Math.Ceiling(modelTotalItems / (double)PageSize),
+                    items = models
+                });
             }
 
             return Ok(new
             {
                 Query = searchTerm,
-                Type = type ?? "all",
+                Type = searchType,
+                Page = page,
+                PageSize = PageSize,
                 Results = results
             });
         }
@@ -181,12 +212,14 @@ namespace Digital_Mall_API.Controllers.User
                 .Select(c => new
                 {
                     c.Id,
-                    c.Name,
+                    c.EnglishName,
+                    c.ArabicName,
                     c.ImageUrl,
                     SubCategories = c.SubCategories.Select(sc => new
                     {
                         sc.Id,
-                        sc.Name
+                        sc.EnglishName,
+                        sc.ArabicName
                     })
                 })
                 .ToListAsync();
@@ -296,7 +329,8 @@ namespace Digital_Mall_API.Controllers.User
                 .Select(sc => new
                 {
                     sc.Id,
-                    sc.Name,
+                    sc.EnglishName,
+                    sc.ArabicName,
                     sc.ImageUrl
                 })
                 .ToList();
@@ -306,7 +340,8 @@ namespace Digital_Mall_API.Controllers.User
                 Category = new
                 {
                     category.Id,
-                    category.Name,
+                    category.EnglishName,
+                    category.ArabicName,
                     category.ImageUrl
                 },
                 SubCategories = subCategories
@@ -393,12 +428,14 @@ namespace Digital_Mall_API.Controllers.User
                 Category = new
                 {
                     category.Id,
-                    category.Name,
+                    category.EnglishName,
+                    category.ArabicName,
                     category.ImageUrl,
                     SubCategories = category.SubCategories.Select(sc => new
                     {
                         sc.Id,
-                        sc.Name
+                        sc.EnglishName,
+                        sc.ArabicName
                     })
                 },
                 Products = new
@@ -488,11 +525,13 @@ namespace Digital_Mall_API.Controllers.User
                 SubCategory = new
                 {
                     subCategory.Id,
-                    subCategory.Name,
+                    subCategory.EnglishName,
+                    subCategory.ArabicName,
                     Category = new
                     {
                         subCategory.Category.Id,
-                        subCategory.Category.Name,
+                        subCategory.Category.EnglishName,
+                        subCategory.Category.ArabicName,
                         subCategory.Category.ImageUrl
                     }
                 },
@@ -546,7 +585,7 @@ namespace Digital_Mall_API.Controllers.User
                     PostedByImage = reel.PostedByUserType == "FashionModel"
                         ? reel.PostedByModel.ImageUrl
                         : reel.PostedByBrand.LogoUrl,
-                    LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
+                    LinkedProducts = reel.LinkedProducts.Where(p=>p.Product.IsActive == true).Select(rp => new ReelProductDto
                     {
                         ProductId = rp.ProductId,
                         ProductName = rp.Product.Name,
@@ -606,7 +645,7 @@ namespace Digital_Mall_API.Controllers.User
                     PostedByImage = reel.PostedByUserType == "FashionModel"
                         ? reel.PostedByModel.ImageUrl
                         : reel.PostedByBrand.LogoUrl,
-                    LinkedProducts = reel.LinkedProducts.Select(rp => new ReelProductDto
+                    LinkedProducts = reel.LinkedProducts.Where(p=>p.Product.IsActive == true).Select(rp => new ReelProductDto
                     {
                         ProductId = rp.ProductId,
                         ProductName = rp.Product.Name,

@@ -10,7 +10,10 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
 
         [Required]
         [StringLength(100)]
-        public string Name { get; set; }
+        public string EnglishName { get; set; }
+        [StringLength(100)]
+        public string? ArabicName { get; set; }
+
 
         [StringLength(500)]
         public string Description { get; set; }

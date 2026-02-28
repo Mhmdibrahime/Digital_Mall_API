@@ -10,6 +10,8 @@
         public string LogoUrl { get; set; }
         public string CommercialRegistrationNumber { get; set; }
         public string TaxCardNumber { get; set; }
+        public bool IsCertified { get; set; } 
+
         public string Status { get; set; }
         public decimal CommissionRate { get; set; }
         public string EvidenceOfProofUrl { get; set; }

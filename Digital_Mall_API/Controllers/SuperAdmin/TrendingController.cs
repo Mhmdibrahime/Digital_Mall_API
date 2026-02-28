@@ -55,7 +55,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 {
                     Id = p.Id,
                     Name = p.Name,
-                    Category = p.SubCategory.Name,
+                    Category = p.SubCategory.EnglishName,
+                    CategoryInArabic = p.SubCategory.ArabicName,
                     ProductId = $"prod_{p.Id:D3}",
                     Brand = p.Brand.OfficialName,
                     Status = p.IsTrend ? "Trending" : "Regular",
@@ -90,7 +91,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 {
                     Id = p.Id,
                     Name = p.Name,
-                    Category = p.SubCategory.Name,
+                    Category = p.SubCategory.EnglishName,
+                    CategoryInArabic = p.SubCategory.ArabicName,
                     ProductId = $"prod_{p.Id:D3}",
                     Brand = p.Brand.OfficialName,
                     Status = p.IsTrend ? "Trending" : "Regular",
@@ -159,7 +161,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             {
                 Id = product.Id,
                 Name = product.Name,
-                Category = product.SubCategory?.Name ?? "N/A",
+                Category = product.SubCategory?.EnglishName ?? "N/A",
+                CategoryInArabic = product.SubCategory?.ArabicName ?? "غير معروف",
                 ProductId = $"prod_{product.Id:D3}",
                 Brand = product.Brand?.OfficialName ?? "N/A",
                 Status = product.IsTrend ? "Trending" : "Regular",

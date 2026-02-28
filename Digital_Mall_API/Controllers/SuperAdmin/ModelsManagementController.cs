@@ -95,6 +95,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     Email = u != null ? u.Email : "Not Found",
                     CommissionRate = m.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate,
                     CreatedAt = m.CreatedAt,
+                    IsCertified = m.IsCertified,
                     ReelsCount = m.Reels.Count,
                     TotalLikes = m.Reels.Sum(r => r.LikesCount),
                     TotalEarnings = m.Payouts
@@ -134,7 +135,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     FullName = m.Name,
                     Email = user.Email ?? "Not Found",
                     Phone = user.PhoneNumber ?? "Not Found",
-                    
+                    IsCertified = m.IsCertified,
                     Bio = m.Bio,
                     Status = m.Status,
                     CommissionRate = m.SpecificCommissionRate ?? _context.GlobalCommission.FirstOrDefault().CommissionRate,
@@ -210,7 +211,25 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
             return Ok(new { Message = "Model status updated successfully" });
         }
-
+        [HttpPut("{id}/UpdateModelCertification")]
+        public async Task<IActionResult> CertifyModel(Guid id)
+        {
+            var model = await _context.FashionModels.FindAsync(id.ToString());
+            if (model == null)
+            {
+                return NotFound();
+            }
+            if(model.IsCertified)
+            {
+                model.IsCertified = false;
+            }
+            else
+            {
+                model.IsCertified = true;
+            }
+            await _context.SaveChangesAsync();
+            return Ok(new { Message = "Model certification status updated successfully" });
+        }
         [HttpPut("{id}/EditCommission")]
         public async Task<IActionResult> UpdateCommissionRate(Guid id, [FromBody] decimal commissionRate)
         {
@@ -247,7 +266,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
 
             if (hasReels || hasPayouts)
             {
-                return BadRequest("Cannot delete model with associated reels or payouts");
+                model.Status = "Suspended";
+                await _context.SaveChangesAsync();
+                return BadRequest("Model has Suspended cause Cannot delete model with associated reels or payouts ");
             }
 
             _context.FashionModels.Remove(model);

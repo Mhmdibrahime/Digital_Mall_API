@@ -29,7 +29,9 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
 
         public string? Description { get; set; }
 
-        
+        public bool IsCertified { get; set; } = false;
+
+
         [Url]
         [StringLength(500)]
         public string? LogoUrl { get; set; }
@@ -56,7 +58,10 @@ namespace Digital_Mall_API.Models.Entities.User___Authentication
 
         [Required]
         [StringLength(500)]
-        public string EvidenceOfProofUrl { get; set; } 
+        public string EvidenceOfProofUrl { get; set; }
+
+        [StringLength(20)]
+        public string? PhoneNumber { get; set; }
 
         public virtual List<Product>? Products { get; set; } = new List<Product>();
         public virtual List<OrderItem>? OrderItems { get; set; } = new List<OrderItem>();

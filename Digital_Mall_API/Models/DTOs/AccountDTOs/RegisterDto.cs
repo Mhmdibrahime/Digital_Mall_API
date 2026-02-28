@@ -58,6 +58,7 @@ namespace Academic.Models.Dto
 
         [Required]
         public string OfficialName { get; set; }
+        public string? PhoneNumber { get; set; }
 
         public string? Facebook { get; set; }
         public string? Instgram { get; set; }

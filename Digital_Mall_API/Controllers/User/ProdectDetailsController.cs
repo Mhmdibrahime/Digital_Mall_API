@@ -32,23 +32,22 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id );
 
-            if (product == null)
+            if (product == null || product.IsActive == false)
                 return NotFound(new { message = "Product not found" });
 
-            
-            var sizes = product.Variants
-                .Select(v => v.Size)
-                .Distinct()
+            // Get available colors with basic info (for initial color selection)
+            var availableColors = product.Variants
+                .Where(v => v.StockQuantity > 0)
+                .GroupBy(v => v.Color)
+                .Select(g => new
+                {
+                    Color = g.Key,
+                    AvailableStock = g.Sum(v => v.StockQuantity),
+                    HasMultipleSizes = g.Select(v => v.Size).Distinct().Count() > 1
+                })
                 .ToList();
-
-            
-            var colors = product.Variants
-                .Select(v => v.Color)
-                .Distinct()
-                .ToList();
-
 
             var images = product.Images
                 .Select(i => i.ImageUrl)
@@ -59,30 +58,28 @@ namespace Digital_Mall_API.Controllers.User
                 .Where(f => f.ProductId == id)
                 .AverageAsync(f => (double?)f.Rating) ?? 0;
 
-
             decimal originalPrice = product.Price;
             decimal discountValue = product.ProductDiscount?.DiscountValue ?? 0;
-            decimal discountedPrice = originalPrice - discountValue;
             string discountStatus = discountValue > 0 ? "Active" : "None";
 
-           
             var productDetails = new
             {
                 product.Id,
                 product.Name,
                 Description = product.Description,
                 BrandName = product.Brand != null ? product.Brand.OfficialName : null,
-                Category = product.SubCategory?.Category?.Name,
-                SubCategory = product.SubCategory?.Name,
+                Category = product.SubCategory?.Category?.EnglishName,
+                CategoryInArabic = product.SubCategory?.Category?.ArabicName,
+                SubCategory = product.SubCategory?.EnglishName,
+                SubCategoryInArabic = product.SubCategory?.ArabicName,
                 OriginalPrice = originalPrice,
                 DiscountValue = discountValue,
                 DiscountedPrice = product.ProductDiscount != null
                         ? product.Price - (product.Price * product.ProductDiscount.DiscountValue / 100)
                         : product.Price,
                 DiscountStatus = discountStatus,
-                AvailableColors = colors,
-                AvailableSizes = sizes,
-                StockQuantity = product.Variants.Sum(v => v.StockQuantity),
+                AvailableColors = availableColors,
+                TotalStockQuantity = product.Variants.Sum(v => v.StockQuantity),
                 Images = images,
                 FeedBacksCount = feedbacksCount,
                 AverageRating = Math.Round(averageRating, 1),
@@ -90,6 +87,45 @@ namespace Digital_Mall_API.Controllers.User
             };
 
             return Ok(productDetails);
+        }
+        [HttpGet("product-variants/{productId}/color/{color}")]
+        public async Task<IActionResult> GetSizesForColor(int productId, string color)
+        {
+            try
+            {
+                var variants = await _context.ProductVariants
+                    .Where(v => v.ProductId == productId &&
+                               v.Color.ToLower() == color.ToLower() &&
+                               v.StockQuantity > 0)
+                    .Select(v => new
+                    {
+                        VariantId = v.Id,
+                        Size = v.Size,
+                        StockQuantity = v.StockQuantity,
+                        FinalPrice = v.Product.ProductDiscount != null
+                            ? (v.Product.Price) -
+                              ((v.Product.Price ) * v.Product.ProductDiscount.DiscountValue / 100)
+                            : v.Product.Price 
+                    })
+                    .OrderBy(v => v.Size)
+                    .ToListAsync();
+
+                if (!variants.Any())
+                {
+                    return NotFound(new { message = "No available variants found for this color" });
+                }
+
+                return Ok(new
+                {
+                    Color = color,
+                    AvailableSizes = variants,
+                    TotalAvailable = variants.Sum(v => v.StockQuantity)
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving variant information", error = ex.Message });
+            }
         }
         [HttpGet("brand-details/{productId}")]
         public async Task<IActionResult> GetBrandDetailsByProduct(int productId)
@@ -127,6 +163,7 @@ namespace Digital_Mall_API.Controllers.User
                 FollowersCount = followersCount,
                 FollowersFormatted = FormatCount(followersCount),
                 ProductsCount = productsCount,
+                IsCertified = brand.IsCertified,
                 Location = brand.Location,
                 Description = brand.Description,
                 LogoUrl = brand.LogoUrl,

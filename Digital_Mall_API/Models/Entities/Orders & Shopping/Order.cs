@@ -8,8 +8,7 @@ namespace Digital_Mall_API.Models.Entities.Orders___Shopping
     {
         public int Id { get; set; }
 
-        [Required]
-        public string CustomerId { get; set; }
+        public string? CustomerId { get; set; }
 
      
 

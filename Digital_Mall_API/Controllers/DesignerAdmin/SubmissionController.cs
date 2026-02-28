@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Digital_Mall_API.Controllers.DesignerAdmin
 {
@@ -70,35 +71,42 @@ namespace Digital_Mall_API.Controllers.DesignerAdmin
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TshirtDesignSubmissionListDto>>> GetAll(
-     [FromQuery] int pageNumber = 1,
-     [FromQuery] int pageSize = 20)
+    [FromQuery] int pageNumber = 1,
+    [FromQuery] int pageSize = 20)
         {
             var query = context.TshirtDesignSubmissions
-                .Include(s => s.Order).ThenInclude(o => o.CustomerUser)
+                .Include(s => s.Order)
+                    .ThenInclude(o => o.CustomerUser)
                 .Include(s => s.Images)
                 .AsQueryable();
 
-
             var totalCount = await query.CountAsync();
-
 
             var submissions = await query
                 .OrderByDescending(s => s.SubmissionDate)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
+                .Select(s => new
+                {
+                    Submission = s,
+                    PhoneNumber = s.Order != null && s.Order.CustomerUser != null
+                        ? s.Order.CustomerUser.PhoneNumber
+                        : null
+                })
                 .ToListAsync();
 
-            var result = submissions.Select(s => new TshirtDesignSubmissionListDto
+            var result = submissions.Select(x => new TshirtDesignSubmissionListDto
             {
-                SubmissionId = s.Id,
-                ClientName = s.Order.CustomerUser?.FullName ?? "Unknown",
-                PhoneNumber = context.Users.FirstOrDefault(x => x.Id.ToString() == s.Order.CustomerUser.Id).PhoneNumber ?? "Unknown",
-
-                DesignName = s.DesignName,
-                Description = s.Description,
-                SubmissionDate = s.SubmissionDate,
-                ImageUrls = s.Images.Select(i => i.ImageUrl).ToList()
-            });
+                SubmissionId = x.Submission.Id,
+                ClientName = x.Submission.Order?.CustomerUser?.FullName ?? "Unknown",
+                PhoneNumber = x.PhoneNumber ?? "Unknown",
+                DesignName = x.Submission.DesignName ?? "Unknown",
+                Description = x.Submission.Description ?? "No description",
+                SubmissionDate = x.Submission.SubmissionDate,
+                ImageUrls = x.Submission.Images != null
+                    ? x.Submission.Images.Select(i => i.ImageUrl).Where(url => url != null).ToList()
+                    : new List<string>()
+            }).ToList();
 
             return Ok(new
             {

@@ -62,7 +62,10 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         Reason = r.Reason,
                         ImageUrl = r.ImageUrl,
                         Status = r.Status,
-                        RequestDate = r.RequestDate.ToString("yyyy-MM-dd")
+                        RequestDate = r.RequestDate.ToString("yyyy-MM-dd"),
+                        PhoneNumber = r.Customer.PhoneNumber,
+                        Address = $"{r.Order.ShippingAddress_Building}, {r.Order.ShippingAddress_Street}, {r.Order.ShippingAddress_City}, {r.Order.ShippingAddress_Country}"
+,
                     })
                     .ToListAsync();
 
@@ -111,7 +114,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     ImageUrl = refund.ImageUrl,
                     Status = refund.Status,
                     RequestDate = refund.RequestDate.ToString("yyyy-MM-dd"),
-                    AdminNotes = refund.AdminNotes
+                    AdminNotes = refund.AdminNotes,
+                    phoneNumber = refund.Customer.PhoneNumber,
+                    Address = $"{refund.Order.ShippingAddress_Building}, {refund.Order.ShippingAddress_Street}, {refund.Order.ShippingAddress_City}, {refund.Order.ShippingAddress_Country}"
                 };
 
                 return Ok(refundDetails);

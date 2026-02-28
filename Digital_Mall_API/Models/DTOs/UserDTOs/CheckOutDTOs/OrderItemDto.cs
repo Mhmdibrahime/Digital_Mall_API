@@ -10,5 +10,9 @@ namespace Digital_Mall_API.Models.DTOs.UserDTOs.CheckOutDTOs
         [Required]
         [Range(1, int.MaxValue)]
         public int Quantity { get; set; }
+        public string? ModelId { get; set; }
+        public int? ReelId { get; set; }
+
+
     }
 }

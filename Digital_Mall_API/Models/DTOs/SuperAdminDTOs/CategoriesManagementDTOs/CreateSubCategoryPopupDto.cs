@@ -8,6 +8,9 @@ namespace Digital_Mall_API.Models.DTOs.SuperAdminDTOs.CategoriesManagementDTOs
         [StringLength(100, ErrorMessage = "Subcategory name cannot exceed 100 characters")]
         public string Name { get; set; }
 
+        [StringLength(100, ErrorMessage = "Subcategory name cannot exceed 100 characters")]
+        public string? ArabicName { get; set; }
+
         [Required(ErrorMessage = "Category is required")]
         public int CategoryId { get; set; }
 

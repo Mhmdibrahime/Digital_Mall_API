@@ -35,7 +35,8 @@ namespace Digital_Mall_API.Controllers.User
                 {
                     Id = c.Id,
                     Image = c.ImageUrl,
-                    Name=c.Name
+                    Name=c.EnglishName,
+                    ArabicName = c.ArabicName
 
                 })
                 .ToListAsync();

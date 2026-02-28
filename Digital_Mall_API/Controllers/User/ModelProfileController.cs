@@ -61,6 +61,7 @@ namespace Digital_Mall_API.Controllers.User
                 Name = model.Name,
                 Bio = model.Bio,
                 ImageUrl = model.ImageUrl,
+                IsCertified = model.IsCertified,
                 FollowersCount = followersCount,
                 ReelsCount = reelsCount,
                 TotalLikes = totalLikes,
@@ -109,7 +110,7 @@ namespace Digital_Mall_API.Controllers.User
                     r.SharesCount,
                     r.PostedDate,
                     r.DurationInSeconds,
-                    Products = r.LinkedProducts.Select(rp => new
+                    Products = r.LinkedProducts.Where(p=>p.Product.IsActive == true).Select(rp => new
                     {
                         rp.Product.Id,
                         rp.Product.Name,

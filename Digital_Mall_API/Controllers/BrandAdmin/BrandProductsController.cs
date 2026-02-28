@@ -78,8 +78,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     Description = p.Description,
                     Price = p.Price,
                     IsActive = p.IsActive,
-                    CategoryName = p.SubCategory.Category.Name,
-                    SubCategoryName = p.SubCategory.Name,
+                    CategoryName = p.SubCategory.Category.EnglishName,
+                    SubCategoryName = p.SubCategory.EnglishName,
                     Gender = p.Gender,
                     Variants = p.Variants.Select(v => new ProductVariantDto
                     {
@@ -113,8 +113,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 Description = product.Description,
                 Price = product.Price,
                 IsActive = product.IsActive,
-                CategoryName = product.SubCategory.Category.Name,
-                SubCategoryName = product.SubCategory.Name,
+                CategoryName = product.SubCategory.Category.EnglishName,
+                SubCategoryName = product.SubCategory.EnglishName,
                 Gender = product.Gender,
                 Variants = product.Variants.Select(v => new ProductVariantDto
                 {
@@ -134,7 +134,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 .Select(c => new
                 {
                     Id = c.Id,
-                    Name = c.Name
+                    Name = c.EnglishName
                 })
                 .ToListAsync();
             return Ok(categories);
@@ -148,7 +148,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 .Select(sc => new
                 {
                     Id = sc.Id,
-                    Name = sc.Name
+                    Name = sc.EnglishName
                 })
                 .ToListAsync();
 
@@ -235,17 +235,16 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         }
 
 
-
         [HttpPut("Update/{id}")]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult> Update(
-    int id,
-    [FromForm] ProductCreateDto dto,
-    [FromQuery] string pVariantsJson)
+            int id,
+            [FromForm] ProductUpdateDto dto, // Changed to UpdateDto
+            [FromQuery] string pVariantsJson)
         {
             var product = await _context.Products
                 .Include(p => p.Variants)
-                    .ThenInclude(v => v.OrderItems) // Include OrderItems to check for associations
+                    .ThenInclude(v => v.OrderItems)
                 .Include(p => p.Images)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -284,28 +283,75 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     _context.ProductVariants.RemoveRange(variantsWithoutOrders);
                 }
 
-                // Handle product images (images typically don't have order associations)
-                if (dto.Images != null && dto.Images.Count > 0)
+                // ==================== UPDATED IMAGE HANDLING LOGIC ====================
+                // Handle image deletions if specified
+                if (dto.ImagesToDelete != null && dto.ImagesToDelete.Count > 0)
                 {
-                    // Remove old images (usually safe since images don't have direct order relationships)
-                    _context.ProductImages.RemoveRange(product.Images);
+                    var imagesToDelete = product.Images
+                        .Where(img => dto.ImagesToDelete.Contains(img.ImageUrl))
+                        .ToList();
 
-                    foreach (var file in dto.Images)
+                    foreach (var image in imagesToDelete)
                     {
-                        var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-                        var path = Path.Combine(_env.WebRootPath, "uploads", "products", fileName);
+                        // Delete physical file
+                        var physicalPath = Path.Combine(_env.WebRootPath, image.ImageUrl.TrimStart('/'));
+                        if (System.IO.File.Exists(physicalPath))
+                        {
+                            System.IO.File.Delete(physicalPath);
+                        }
 
-                        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                        using var stream = new FileStream(path, FileMode.Create);
+                        // Remove from database
+                        _context.ProductImages.Remove(image);
+                    }
+                }
+
+                // Handle new image uploads
+                if (dto.NewImages != null && dto.NewImages.Count > 0)
+                {
+                    // Ensure we don't exceed maximum images (optional)
+                    const int maxImages = 10;
+                    var currentImageCount = product.Images.Count - (dto.ImagesToDelete?.Count ?? 0);
+
+                    if (currentImageCount + dto.NewImages.Count > maxImages)
+                    {
+                        return BadRequest($"Cannot upload {dto.NewImages.Count} new images. Maximum {maxImages} images allowed.");
+                    }
+
+                    foreach (var file in dto.NewImages)
+                    {
+                        // Validate file type
+                        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+                        if (!allowedExtensions.Contains(extension))
+                        {
+                            return BadRequest($"Invalid file type: {extension}. Allowed types: {string.Join(", ", allowedExtensions)}");
+                        }
+
+                        // Validate file size (e.g., 5MB max)
+                        const long maxFileSize = 5 * 1024 * 1024;
+                        if (file.Length > maxFileSize)
+                        {
+                            return BadRequest($"File {file.FileName} exceeds maximum size of 5MB");
+                        }
+
+                        var fileName = $"{Guid.NewGuid()}{extension}";
+                        var uploadPath = Path.Combine("uploads", "products", fileName);
+                        var fullPath = Path.Combine(_env.WebRootPath, uploadPath);
+
+                        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+                        using var stream = new FileStream(fullPath, FileMode.Create);
                         await file.CopyToAsync(stream);
 
                         _context.ProductImages.Add(new ProductImage
                         {
                             ProductId = product.Id,
-                            ImageUrl = $"/uploads/products/{fileName}"
+                            ImageUrl = $"/{uploadPath.Replace("\\", "/")}"
                         });
                     }
                 }
+
+               
 
                 await _context.SaveChangesAsync();
                 return Ok(new { Message = "Product updated successfully", product.Id });

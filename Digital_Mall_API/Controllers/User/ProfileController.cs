@@ -978,12 +978,12 @@ namespace Digital_Mall_API.Controllers
                     // Option 2: Mark as cancelled (recommended for audit purposes)
                     foreach (var refund in refundRequests)
                     {
-                        refund.CustomerId = "DELETED_USER";
+                        refund.CustomerId = null;
                         refund.Status = "Cancelled - Account Deleted";
                     }
                     foreach (var refundTx in refundTransactions)
                     {
-                        refundTx.CustomerId = "DELETED_USER";
+                        refundTx.CustomerId = null;
                         refundTx.Status = "Account Deleted";
 
                     }
@@ -997,10 +997,18 @@ namespace Digital_Mall_API.Controllers
                     foreach (var order in userOrders)
                     {
                         // Keep order records but remove personal identifiers
-                        order.CustomerId = "DELETED_USER";
+                        order.CustomerId = null;
                         
                     }
+                    var userTshirtDesignOrders = await _context.TshirtDesignOrders
+                        .Where(o => o.CustomerUserId == customer.Id)
+                        .ToListAsync();
+                    foreach (var order in userTshirtDesignOrders)
+                    {
+                        // Keep order records but remove personal identifiers
+                        order.CustomerUserId = null;
 
+                    }
                     // 4. Delete customer record
                     if (customer != null)
                     {

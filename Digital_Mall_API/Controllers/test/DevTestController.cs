@@ -1,6 +1,7 @@
 ﻿using Digital_Mall_API.Models.Data;
 using Digital_Mall_API.Models.Entities.Reels___Content;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Digital_Mall_API.Controllers
@@ -17,6 +18,21 @@ namespace Digital_Mall_API.Controllers
             _context = context;
             _logger = logger;
         }
+        //[HttpGet("test-db")]
+        //public async Task<IActionResult> TestDb([FromServices] IConfiguration config)
+        //{
+        //    var conn = config.GetConnectionString("constr");
+        //    try
+        //    {
+        //        using var sql = new SqlConnection(conn);
+        //        await sql.OpenAsync();
+        //        return Ok("Connected successfully");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return Problem(ex.Message);
+        //    }
+        //}
 
         // Test endpoint to simulate a successful upload
         [HttpPost("simulate-success/{reelId}")]
