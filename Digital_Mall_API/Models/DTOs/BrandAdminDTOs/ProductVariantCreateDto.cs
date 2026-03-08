@@ -5,6 +5,7 @@
         public string Color { get; set; }
         public string Size { get; set; }
         public int StockQuantity { get; set; }
+        public List<IFormFile> Images { get; set; } = new List<IFormFile>(); 
     }
 
 }

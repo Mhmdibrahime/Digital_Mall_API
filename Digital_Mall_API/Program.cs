@@ -86,6 +86,14 @@ namespace Digital_Mall_API
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddGoogle(options =>
+            {
+                options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+                options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+                options.SaveTokens = true;
+       
+                options.Scope.Add("profile");
+                options.Scope.Add("email");
             })
             .AddJwtBearer(options =>
             {

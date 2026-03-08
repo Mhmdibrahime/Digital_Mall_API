@@ -32,12 +32,13 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
-                .FirstOrDefaultAsync(p => p.Id == id );
+                    .ThenInclude(v => v.Images)          // ← include variant images
+                .FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
 
-            if (product == null || product.IsActive == false)
+            if (product == null)
                 return NotFound(new { message = "Product not found" });
 
-            // Get available colors with basic info (for initial color selection)
+            // Available colors (grouped) – kept for backward compatibility
             var availableColors = product.Variants
                 .Where(v => v.StockQuantity > 0)
                 .GroupBy(v => v.Color)
@@ -49,9 +50,17 @@ namespace Digital_Mall_API.Controllers.User
                 })
                 .ToList();
 
-            var images = product.Images
-                .Select(i => i.ImageUrl)
-                .ToList();
+            // Full variant details including images
+            var variants = product.Variants.Select(v => new
+            {
+                v.Id,
+                v.Color,
+                v.Size,
+                v.StockQuantity,
+                Images = v.Images.Select(img => img.ImageUrl).ToList()
+            }).ToList();
+
+            var images = product.Images.Select(i => i.ImageUrl).ToList();
 
             var feedbacksCount = await _context.ProductFeedbacks.CountAsync(f => f.ProductId == id);
             var averageRating = await _context.ProductFeedbacks
@@ -61,24 +70,26 @@ namespace Digital_Mall_API.Controllers.User
             decimal originalPrice = product.Price;
             decimal discountValue = product.ProductDiscount?.DiscountValue ?? 0;
             string discountStatus = discountValue > 0 ? "Active" : "None";
+            decimal discountedPrice = product.ProductDiscount != null
+                ? product.Price - (product.Price * product.ProductDiscount.DiscountValue / 100)
+                : product.Price;
 
             var productDetails = new
             {
                 product.Id,
                 product.Name,
                 Description = product.Description,
-                BrandName = product.Brand != null ? product.Brand.OfficialName : null,
+                BrandName = product.Brand?.OfficialName,
                 Category = product.SubCategory?.Category?.EnglishName,
                 CategoryInArabic = product.SubCategory?.Category?.ArabicName,
                 SubCategory = product.SubCategory?.EnglishName,
                 SubCategoryInArabic = product.SubCategory?.ArabicName,
                 OriginalPrice = originalPrice,
                 DiscountValue = discountValue,
-                DiscountedPrice = product.ProductDiscount != null
-                        ? product.Price - (product.Price * product.ProductDiscount.DiscountValue / 100)
-                        : product.Price,
+                DiscountedPrice = discountedPrice,
                 DiscountStatus = discountStatus,
                 AvailableColors = availableColors,
+                Variants = variants,                    
                 TotalStockQuantity = product.Variants.Sum(v => v.StockQuantity),
                 Images = images,
                 FeedBacksCount = feedbacksCount,
@@ -94,6 +105,9 @@ namespace Digital_Mall_API.Controllers.User
             try
             {
                 var variants = await _context.ProductVariants
+                    .Include(v => v.Images)                     
+                    .Include(v => v.Product)                    
+                        .ThenInclude(p => p.ProductDiscount)    
                     .Where(v => v.ProductId == productId &&
                                v.Color.ToLower() == color.ToLower() &&
                                v.StockQuantity > 0)
@@ -102,10 +116,10 @@ namespace Digital_Mall_API.Controllers.User
                         VariantId = v.Id,
                         Size = v.Size,
                         StockQuantity = v.StockQuantity,
+                        Images = v.Images.Select(img => img.ImageUrl).ToList(),
                         FinalPrice = v.Product.ProductDiscount != null
-                            ? (v.Product.Price) -
-                              ((v.Product.Price ) * v.Product.ProductDiscount.DiscountValue / 100)
-                            : v.Product.Price 
+                            ? v.Product.Price - (v.Product.Price * v.Product.ProductDiscount.DiscountValue / 100)
+                            : v.Product.Price
                     })
                     .OrderBy(v => v.Size)
                     .ToListAsync();

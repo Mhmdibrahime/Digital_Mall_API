@@ -765,6 +765,32 @@ namespace Digital_Mall_API.Migrations
                     b.ToTable("ProductVariants");
                 });
 
+            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductVariantImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("ProductVariantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.ToTable("ProductVariantImages");
+                });
+
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.SubCategory", b =>
                 {
                     b.Property<int>("Id")
@@ -1438,6 +1464,11 @@ namespace Digital_Mall_API.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("WalletBalance")
                         .HasColumnType("decimal(18,2)");
@@ -2162,6 +2193,17 @@ namespace Digital_Mall_API.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductVariantImage", b =>
+                {
+                    b.HasOne("Digital_Mall_API.Models.Entities.Product_Catalog.ProductVariant", "ProductVariant")
+                        .WithMany("Images")
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProductVariant");
+                });
+
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.SubCategory", b =>
                 {
                     b.HasOne("Digital_Mall_API.Models.Entities.Product_Catalog.Category", "Category")
@@ -2489,6 +2531,8 @@ namespace Digital_Mall_API.Migrations
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductVariant", b =>
                 {
+                    b.Navigation("Images");
+
                     b.Navigation("OrderItems");
                 });
 

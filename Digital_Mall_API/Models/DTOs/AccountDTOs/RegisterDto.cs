@@ -28,6 +28,10 @@ namespace Academic.Models.Dto
     
 
     }
+    public class GoogleLoginDto
+    {
+        public string IdToken { get; set; }   // التوكن القادم من Google
+    }
     public class RegisterCustomerDto
     {
         [Required, EmailAddress]
@@ -41,6 +45,9 @@ namespace Academic.Models.Dto
 
         [Required]
         public string FullName { get; set; }
+
+        [Required]
+        public string UserName { get; set; }
 
         [Required, Phone]
         public string MobileNumber { get; set; }

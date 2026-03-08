@@ -3,6 +3,7 @@ using Digital_Mall_API.Models.DTOs.SuperAdminDTOs.RefundDTOs;
 using Digital_Mall_API.Models.DTOs.UserDTOs.ProfileDTOs;
 using Digital_Mall_API.Models.Entities.Orders___Shopping;
 using Digital_Mall_API.Models.Entities.User___Authentication;
+using Digital_Mall_API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -20,17 +21,23 @@ namespace Digital_Mall_API.Controllers
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly RoleManager<IdentityRole<Guid>> _roleManager;
+        private readonly FileService _fileservice;
 
         public ProfileController(
             UserManager<ApplicationUser> userManager,
             AppDbContext context,
             IWebHostEnvironment environment
-            ,SignInManager<ApplicationUser> signInManager)
+            ,SignInManager<ApplicationUser> signInManager,
+            RoleManager<IdentityRole<Guid>> roleManager,
+            FileService fileservice)
         {
             _userManager = userManager;
             _context = context;
             _environment = environment;
             _signInManager = signInManager;
+            _roleManager = roleManager;
+            _fileservice = fileservice;
         }
 
         [HttpGet("balance")]
@@ -1067,6 +1074,171 @@ namespace Digital_Mall_API.Controllers
                     Success = false,
                     Message = $"Error deleting account: {ex.Message}"
                 });
+            }
+        }
+
+        [HttpPost("upgrade-to-brand")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> UpgradeToBrand([FromForm] UpgradeToBrandDto dto)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized();
+
+            var userIdString = user.Id.ToString();
+
+            // Check if customer exists
+            var customer = await _context.Customers.FindAsync(userIdString);
+            if (customer == null)
+                return BadRequest("Customer record not found.");
+
+            // Prevent upgrade if customer has orders (business rule)
+            if (customer.Orders != null && customer.Orders.Any())
+                return BadRequest("Cannot upgrade because you have existing orders. Please contact support.");
+
+            // Ensure no brand already exists for this user
+            var existingBrand = await _context.Brands.FindAsync(userIdString);
+            if (existingBrand != null)
+                return BadRequest("User already has a brand profile.");
+
+            // Save evidence file
+            string evidenceUrl = null;
+            if (dto.EvidenceFile != null)
+            {
+                evidenceUrl = await _fileservice.SaveFileAsync(dto.EvidenceFile, "evidence");
+            }
+
+         
+
+            // Create brand entity
+            var brand = new Brand
+            {
+                Id = userIdString,
+                OfficialName = dto.OfficialName,
+                EvidenceOfProofUrl = evidenceUrl,
+                PhoneNumber = customer.PhoneNumber,
+                Facebook = dto.Facebook,
+                Instgram = dto.Instagram, // Note: property name has typo in model
+                Location = dto.Location,
+                Status = "Pending",       // Requires admin approval
+                IsCertified = false,
+                CreatedAt = DateTime.UtcNow,
+                Online = false,           // Defaults
+                Ofline = false,            // Defaults (typo in model)
+                Password=customer.Password,
+            };
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Remove customer
+                _context.Customers.Remove(customer);
+
+                // Add brand
+                _context.Brands.Add(brand);
+
+                // Update roles
+                if (await _userManager.IsInRoleAsync(user, "Customer"))
+                    await _userManager.RemoveFromRoleAsync(user, "Customer");
+
+                if (!await _roleManager.RoleExistsAsync("Brand"))
+                    await _roleManager.CreateAsync(new IdentityRole<Guid>("Brand"));
+
+                await _userManager.AddToRoleAsync(user, "Brand");
+
+                // Save all changes
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new { message = "تم الترقية إلى علامة تجارية بنجاح. سيتم مراجعة طلبك من قبل الإدارة." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                // Optionally delete uploaded files if transaction fails
+                return StatusCode(500, $"حدث خطأ أثناء الترقية: {ex.Message}");
+            }
+        }
+
+        [HttpPost("upgrade-to-model")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> UpgradeToModel([FromForm] UpgradeToModelDto dto)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized();
+
+            var userIdString = user.Id.ToString();
+
+            // Check if customer exists
+            var customer = await _context.Customers
+                .Include(c => c.Orders) // Include orders to check business rule
+                .FirstOrDefaultAsync(c => c.Id == userIdString);
+            if (customer == null)
+                return BadRequest("Customer record not found.");
+
+            // Prevent upgrade if customer has orders (adjust rule as needed)
+            if (customer.Orders != null && customer.Orders.Any())
+                return BadRequest("Cannot upgrade because you have existing orders. Please contact support.");
+
+            // Ensure no model already exists for this user
+            var existingModel = await _context.FashionModels.FindAsync(userIdString);
+            if (existingModel != null)
+                return BadRequest("User already has a model profile.");
+
+            // Save evidence file
+            string evidenceUrl = null;
+            if (dto.EvidenceFile != null)
+            {
+                evidenceUrl = await _fileservice.SaveFileAsync(dto.EvidenceFile, "evidence");
+            }
+
+       
+          
+
+            // Create model entity
+            var model = new FashionModel
+            {
+                Id = userIdString,
+                Name = dto.Name,
+                Status = "Pending",       // Requires admin approval
+                IsCertified = false,
+                CreatedAt = DateTime.UtcNow,
+                EvidenceOfProofUrl = evidenceUrl,
+                Password = customer.Password 
+            };
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Remove customer
+                _context.Customers.Remove(customer);
+
+                // Add model
+                _context.FashionModels.Add(model);
+
+                // Update roles
+                if (await _userManager.IsInRoleAsync(user, "Customer"))
+                    await _userManager.RemoveFromRoleAsync(user, "Customer");
+
+                // Ensure role exists (could be "Model" or "FashionModel")
+                string modelRole = "Model";
+                if (!await _roleManager.RoleExistsAsync(modelRole))
+                    await _roleManager.CreateAsync(new IdentityRole<Guid>(modelRole));
+
+                await _userManager.AddToRoleAsync(user, modelRole);
+
+                // Save all changes
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new { message = "تم الترقية إلى موديل بنجاح. سيتم مراجعة طلبك من قبل الإدارة." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                // Optionally delete uploaded files if transaction fails
+                return StatusCode(500, $"حدث خطأ أثناء الترقية: {ex.Message}");
             }
         }
     }

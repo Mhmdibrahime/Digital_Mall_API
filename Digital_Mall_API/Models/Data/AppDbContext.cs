@@ -63,7 +63,7 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<Favorite> Favorites { get; set; }
         public DbSet<ProductFeedback> ProductFeedbacks { get; set; }
         public DbSet<ShippingGovernorate> ShippingGovernorates { get; set; }
-
+        public DbSet<ProductVariantImage> ProductVariantImages { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

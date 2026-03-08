@@ -1,21 +1,22 @@
-﻿using Digital_Mall_API.Models.Entities.User___Authentication;
+﻿using Academic.Models.Dto;
+using Digital_Mall_API.Models;
+using Digital_Mall_API.Models.Data;
+using Digital_Mall_API.Models.Entities.User___Authentication;
+using Digital_Mall_API.Services;
+using EmailService;
+using Google.Apis.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Restaurant_App.Models.DTO;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Academic.Models.Dto;
-using Digital_Mall_API.Models;
-using Microsoft.Extensions.Options;
-using EmailService;
-using Microsoft.AspNetCore.WebUtilities;
-using Restaurant_App.Models.DTO;
-using Microsoft.AspNetCore.Authorization;
-using Digital_Mall_API.Services;
-using Digital_Mall_API.Models.Data;
 
 namespace Digital_Mall_API.Controllers.Account
 {
@@ -54,6 +55,105 @@ namespace Digital_Mall_API.Controllers.Account
             _fileService = fileservice;
         }
 
+        [HttpPost("google-login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto dto)
+        {
+            if (string.IsNullOrEmpty(dto.IdToken))
+                return BadRequest("معرف التوكن مطلوب.");
+
+            try
+            {
+                
+                var payload = await GoogleJsonWebSignature.ValidateAsync(dto.IdToken);
+
+             
+                var email = payload.Email;
+                var name = payload.Name;
+                var googleId = payload.Subject; 
+
+                if (string.IsNullOrEmpty(email))
+                    return BadRequest("البريد الإلكتروني غير متوفر من Google.");
+
+               
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user != null)
+                {
+                   
+                    var logins = await _userManager.GetLoginsAsync(user);
+                    var hasGoogleLogin = logins.Any(l => l.LoginProvider == "Google" && l.ProviderKey == googleId);
+
+                    if (!hasGoogleLogin)
+                    {
+                       
+                        var addLoginResult = await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", googleId, "Google"));
+                        if (!addLoginResult.Succeeded)
+                            return BadRequest("حدث خطأ أثناء ربط حساب Google.");
+                    }
+                }
+                else
+                {
+                    // إنشاء مستخدم جديد
+                    user = new ApplicationUser
+                    {
+                        UserName = name, 
+                        Email = email,
+                        DisplayName = name ?? email
+                    };
+
+                    var createResult = await _userManager.CreateAsync(user);
+                    if (!createResult.Succeeded)
+                        return BadRequest(createResult.Errors);
+
+                    await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", googleId, "Google"));
+
+                  
+                    if (!await _roleManager.RoleExistsAsync("Customer"))
+                        await _roleManager.CreateAsync(new IdentityRole<Guid>("Customer"));
+                    await _userManager.AddToRoleAsync(user, "Customer");
+
+                   
+                    var customer = new Customer
+                    {
+                        Id = user.Id.ToString(),
+                        UserName = user.UserName,
+                        FullName = name ?? email,
+                        Email = email,
+                        PhoneNumber = "",
+                        Password = "",
+                        Status = "Active",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Customers.Add(customer);
+                    await _context.SaveChangesAsync();
+                }
+
+                // إنشاء JWT مخصص للتطبيق
+                var token = await GenerateJwt(user);
+
+                return Ok(new
+                {
+                    token,
+                    user = new
+                    {
+                        user.Id,
+                        user.Email,
+                        user.DisplayName,
+                     
+                    }
+                });
+            }
+            catch (InvalidJwtException ex)
+            {
+                return Unauthorized("توكن Google غير صالح.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"حدث خطأ داخلي: {ex.Message}");
+            }
+        }
+       
+
         [HttpPost("register-customer")]
         public async Task<IActionResult> RegisterCustomer([FromForm] RegisterCustomerDto dto)
         {
@@ -62,7 +162,7 @@ namespace Digital_Mall_API.Controllers.Account
 
             var user = new ApplicationUser
             {
-                UserName = dto.Email,
+                UserName = dto.UserName,
                 Email = dto.Email,
                 PhoneNumber = dto.MobileNumber,
                 DisplayName = dto.FullName
@@ -79,6 +179,7 @@ namespace Digital_Mall_API.Controllers.Account
             var customer = new Customer
             {
                 Id = user.Id.ToString(),
+                UserName= dto.UserName,
                 FullName = dto.FullName,
                 PhoneNumber = dto.MobileNumber,
                 Email = dto.Email,

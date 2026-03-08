@@ -28,5 +28,6 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
 
         public virtual Product? Product { get; set; }
         public virtual List<OrderItem>? OrderItems { get; set; } = new List<OrderItem>();
+        public virtual List<ProductVariantImage> Images { get; set; } = new List<ProductVariantImage>();
     }
 }

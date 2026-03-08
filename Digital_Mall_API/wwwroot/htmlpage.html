@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>اختبار تسجيل الدخول بـ Google</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        // دالة يتم استدعاؤها بعد نجاح تسجيل الدخول
+        async function handleCredentialResponse(response) {
+            try {
+                const idToken = response.credential; // استخراج التوكن من الاستجابة
+                console.log('تم الحصول على id_token:', idToken);
+
+                // إرسال التوكن إلى الـ API
+                const fetchResponse = await fetch('https://localhost:7108/Account/google-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken: idToken })
+                });
+
+                // قراءة الاستجابة كنص أولاً
+                const text = await fetchResponse.text();
+                console.log('استجابة الخادم (نص):', text);
+
+                // إذا كانت الاستجابة فارغة، خطأ
+                if (!text) {
+                    throw new Error('الاستجابة فارغة');
+                }
+
+                // محاولة تحويلها إلى JSON
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw new Error(`الاستجابة ليست JSON صالح: ${text.substring(0, 200)}`);
+                }
+
+                // التحقق من حالة HTTP
+                if (!fetchResponse.ok) {
+                    throw new Error(data.message || `خطأ ${fetchResponse.status}: ${fetchResponse.statusText}`);
+                }
+
+                // النجاح
+                console.log('تم تسجيل الدخول بنجاح:', data);
+                localStorage.setItem('jwt', data.token);
+                document.getElementById('result').innerText = '✅ تم تسجيل الدخول بنجاح\n' + JSON.stringify(data.user, null, 2);
+            } catch (error) {
+                console.error('خطأ:', error);
+                document.getElementById('result').innerText = '❌ خطأ: ' + error.message;
+            }
+        }
+
+        // تهيئة زر Google بعد تحميل الصفحة
+        window.onload = function () {
+            google.accounts.id.initialize({
+                client_id: '676593719617-1gbm1kr051dnd21sbfojcnbl7ljr1bde.apps.googleusercontent.com',
+                callback: handleCredentialResponse
+            });
+            google.accounts.id.renderButton(
+                document.getElementById('google-signin-button'),
+                { theme: 'outline', size: 'large', text: 'signin_with' }
+            );
+            google.accounts.id.prompt(); // عرض One Tap إذا كان متاحًا
+        };
+    </script>
+</head>
+<body style="font-family: Arial; text-align: center; margin-top: 50px;">
+    <h1>اختبار Google Login</h1>
+    <div id="google-signin-button"></div>
+    <pre id="result" style="background: #f4f4f4; padding: 20px; margin-top: 20px; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto;"></pre>
+</body>
+</html>

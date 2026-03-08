@@ -34,16 +34,18 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(brandId))
                 return Unauthorized("Brand not authorized");
+
             var brand = await _context.Brands.FindAsync(brandId);
-            if(brand == null)
-                return NotFound("Brand not found"); 
+            if (brand == null)
+                return NotFound("Brand not found");
+
             var query = _context.Products
                 .Where(p => p.BrandId == brandId)
                 .Include(p => p.SubCategory).ThenInclude(sc => sc.Category)
                 .Include(p => p.Brand)
                 .Include(p => p.Variants)
+                    .ThenInclude(v => v.Images)          // ← include variant images
                 .Include(p => p.Images)
-                
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(parameters.Search))
@@ -87,6 +89,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                         Color = v.Color,
                         Size = v.Size,
                         StockQuantity = v.StockQuantity,
+                        Images = v.Images.Select(img => img.ImageUrl).ToList() // ← variant images
                     }).ToList(),
                     Images = p.Images.Select(img => img.ImageUrl).ToList()
                 }).ToListAsync();
@@ -101,10 +104,12 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 .Include(p => p.SubCategory).ThenInclude(sc => sc.Category)
                 .Include(p => p.Brand)
                 .Include(p => p.Variants)
+                    .ThenInclude(v => v.Images)          // ← include variant images
                 .Include(p => p.Images)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (product == null) return NotFound();
+            if (product == null)
+                return NotFound();
 
             return new ProductDto
             {
@@ -122,6 +127,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     Color = v.Color,
                     Size = v.Size,
                     StockQuantity = v.StockQuantity,
+                    Images = v.Images.Select(img => img.ImageUrl).ToList() // ← variant images
                 }).ToList(),
                 Images = product.Images.Select(img => img.ImageUrl).ToList()
             };
@@ -155,27 +161,33 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
             return Ok(subcategories);
         }
 
-        [HttpPost("Add")]
+        [HttpPost("AddFlat")]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult> Create(
-    [FromForm] ProductCreateDto dto,
-    [FromQuery] string pVariantsJson 
-)
+        public async Task<ActionResult> CreateFlat([FromForm] ProductCreateFlatDto dto)
         {
-            
             var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(brandId))
                 return Unauthorized("Brand identifier not found in token");
 
             try
             {
-
-                var PVariants = new List<VariantCreateDto>();
-                if (!string.IsNullOrEmpty(pVariantsJson))
+                // Validate that variant lists have the same length
+                if (dto.VariantColors.Count != dto.VariantSizes.Count ||
+                    dto.VariantColors.Count != dto.VariantStockQuantities.Count)
                 {
-                    PVariants = JsonConvert.DeserializeObject<List<VariantCreateDto>>(pVariantsJson);
+                    return BadRequest("Variant data lists must have the same length.");
                 }
 
+                // Validate that each image index is within range
+                if (dto.VariantImageIndices.Any(idx => idx < 0 || idx >= dto.VariantColors.Count))
+                {
+                    return BadRequest("Variant image index out of range.");
+                }
+
+                // Begin transaction
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+
+                // 1. Create product
                 var product = new Product
                 {
                     Name = dto.Name,
@@ -186,32 +198,16 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     BrandId = brandId,
                     SubCategoryId = dto.SubCategoryId
                 };
-
                 _context.Products.Add(product);
                 await _context.SaveChangesAsync();
 
-                if (PVariants != null && PVariants.Any())
-                {
-                    foreach (var variantDto in PVariants)
-                    {
-                        _context.ProductVariants.Add(new ProductVariant
-                        {
-                            ProductId = product.Id,
-                            Color = variantDto.Color,
-                            Size = variantDto.Size,
-                            StockQuantity = variantDto.StockQuantity
-                        });
-                    }
-                    await _context.SaveChangesAsync();
-                }
-
-                if (dto.Images != null && dto.Images.Count > 0)
+                // 2. Save product-level images
+                if (dto.Images != null)
                 {
                     foreach (var file in dto.Images)
                     {
                         var fileName = $"{Guid.NewGuid()}_{file.FileName}";
                         var path = Path.Combine(_env.WebRootPath, "uploads", "products", fileName);
-
                         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
                         using var stream = new FileStream(path, FileMode.Create);
                         await file.CopyToAsync(stream);
@@ -225,42 +221,96 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     await _context.SaveChangesAsync();
                 }
 
+                // 3. Create variants and collect their IDs
+                var variantIds = new List<int>();
+                for (int i = 0; i < dto.VariantColors.Count; i++)
+                {
+                    var variant = new ProductVariant
+                    {
+                        ProductId = product.Id,
+                        Color = dto.VariantColors[i],
+                        Size = dto.VariantSizes[i],
+                        StockQuantity = dto.VariantStockQuantities[i]
+                    };
+                    _context.ProductVariants.Add(variant);
+                    await _context.SaveChangesAsync(); // Save to get ID
+                    variantIds.Add(variant.Id);
+                }
+
+                // 4. Associate images with variants using the index mapping
+                for (int fileIdx = 0; fileIdx < dto.VariantImageFiles.Count; fileIdx++)
+                {
+                    var file = dto.VariantImageFiles[fileIdx];
+                    var variantIndex = dto.VariantImageIndices[fileIdx]; // which variant this image belongs to
+                    var variantId = variantIds[variantIndex];
+
+                    var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+                    var path = Path.Combine(_env.WebRootPath, "uploads", "variantimages", fileName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    using var stream = new FileStream(path, FileMode.Create);
+                    await file.CopyToAsync(stream);
+
+                    _context.ProductVariantImages.Add(new ProductVariantImage
+                    {
+                        ProductVariantId = variantId,
+                        ImageUrl = $"/uploads/variantimages/{fileName}"
+                    });
+                }
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
                 return Ok(new { product.Id, product.Name });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding product");
+                _logger.LogError(ex, "Error adding product with flat DTO");
                 return BadRequest("An error occurred while adding the product");
             }
         }
 
-
-        [HttpPut("Update/{id}")]
+        [HttpPut("UpdateFlat/{id}")]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult> Update(
-            int id,
-            [FromForm] ProductUpdateDto dto, // Changed to UpdateDto
-            [FromQuery] string pVariantsJson)
+        public async Task<ActionResult> UpdateFlat(int id, [FromForm] ProductUpdateDto dto)
         {
+            var brandId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(brandId))
+                return Unauthorized("Brand identifier not found in token");
+
             var product = await _context.Products
                 .Include(p => p.Variants)
                     .ThenInclude(v => v.OrderItems)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.Images)
                 .Include(p => p.Images)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id && p.BrandId == brandId);
 
             if (product == null)
                 return NotFound("Product not found");
 
+            // Validate that variant lists have the same length
+            if (dto.VariantColors.Count != dto.VariantSizes.Count ||
+                dto.VariantColors.Count != dto.VariantStockQuantities.Count)
+            {
+                return BadRequest("Variant data lists must have the same length.");
+            }
+
+            // Validate that each image index is within range
+            if (dto.VariantImageIndices.Any(idx => idx < 0 || idx >= dto.VariantColors.Count))
+            {
+                return BadRequest("Variant image index out of range.");
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
-                // Deserialize variants from JSON query parameter
-                var PVariants = new List<VariantCreateDto>();
-                if (!string.IsNullOrEmpty(pVariantsJson))
+                // Log incoming variant data
+                _logger.LogInformation("Updating product {ProductId} with {VariantCount} variants", id, dto.VariantColors.Count);
+                for (int i = 0; i < dto.VariantColors.Count; i++)
                 {
-                    PVariants = JsonConvert.DeserializeObject<List<VariantCreateDto>>(pVariantsJson);
+                    _logger.LogInformation($"Variant {i}: Color={dto.VariantColors[i]}, Size={dto.VariantSizes[i]}, Stock={dto.VariantStockQuantities[i]}");
                 }
 
-                // Update product basic fields
                 product.Name = dto.Name;
                 product.Description = dto.Description;
                 product.Price = dto.Price;
@@ -268,72 +318,39 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 product.Gender = dto.Gender;
                 product.SubCategoryId = dto.SubCategoryId;
 
-                // Smart variant update logic
-                if (PVariants != null && PVariants.Any())
-                {
-                    await UpdateProductVariants(product, PVariants);
-                }
-                else
-                {
-                    // If no variants provided, remove only variants without orders
-                    var variantsWithoutOrders = product.Variants
-                        .Where(v => !v.OrderItems.Any())
-                        .ToList();
-
-                    _context.ProductVariants.RemoveRange(variantsWithoutOrders);
-                }
-
-                // ==================== UPDATED IMAGE HANDLING LOGIC ====================
-                // Handle image deletions if specified
-                if (dto.ImagesToDelete != null && dto.ImagesToDelete.Count > 0)
+                // ---------- Product images ----------
+                if (dto.ImagesToDelete?.Any() == true)
                 {
                     var imagesToDelete = product.Images
                         .Where(img => dto.ImagesToDelete.Contains(img.ImageUrl))
                         .ToList();
-
-                    foreach (var image in imagesToDelete)
+                    foreach (var img in imagesToDelete)
                     {
-                        // Delete physical file
-                        var physicalPath = Path.Combine(_env.WebRootPath, image.ImageUrl.TrimStart('/'));
+                        var physicalPath = Path.Combine(_env.WebRootPath, img.ImageUrl.TrimStart('/'));
                         if (System.IO.File.Exists(physicalPath))
-                        {
                             System.IO.File.Delete(physicalPath);
-                        }
-
-                        // Remove from database
-                        _context.ProductImages.Remove(image);
+                        _context.ProductImages.Remove(img);
                     }
+                    _logger.LogInformation($"Deleted {imagesToDelete.Count} product images");
                 }
 
-                // Handle new image uploads
-                if (dto.NewImages != null && dto.NewImages.Count > 0)
+                if (dto.NewImages?.Any() == true)
                 {
-                    // Ensure we don't exceed maximum images (optional)
                     const int maxImages = 10;
                     var currentImageCount = product.Images.Count - (dto.ImagesToDelete?.Count ?? 0);
-
                     if (currentImageCount + dto.NewImages.Count > maxImages)
-                    {
-                        return BadRequest($"Cannot upload {dto.NewImages.Count} new images. Maximum {maxImages} images allowed.");
-                    }
+                        return BadRequest($"Cannot upload {dto.NewImages.Count} new images. Maximum {maxImages} allowed.");
 
                     foreach (var file in dto.NewImages)
                     {
-                        // Validate file type
                         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
                         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-
                         if (!allowedExtensions.Contains(extension))
-                        {
-                            return BadRequest($"Invalid file type: {extension}. Allowed types: {string.Join(", ", allowedExtensions)}");
-                        }
+                            return BadRequest($"Invalid file type: {extension}");
 
-                        // Validate file size (e.g., 5MB max)
                         const long maxFileSize = 5 * 1024 * 1024;
                         if (file.Length > maxFileSize)
-                        {
-                            return BadRequest($"File {file.FileName} exceeds maximum size of 5MB");
-                        }
+                            return BadRequest($"File {file.FileName} exceeds 5MB.");
 
                         var fileName = $"{Guid.NewGuid()}{extension}";
                         var uploadPath = Path.Combine("uploads", "products", fileName);
@@ -349,88 +366,159 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                             ImageUrl = $"/{uploadPath.Replace("\\", "/")}"
                         });
                     }
+                    _logger.LogInformation($"Added {dto.NewImages.Count} new product images");
                 }
 
-               
+                // ---------- Variant image deletions ----------
+                if (dto.VariantImageIdsToDelete?.Any() == true)
+                {
+                    var variantImagesToDelete = await _context.ProductVariantImages
+                        .Where(vi => dto.VariantImageIdsToDelete.Contains(vi.Id))
+                        .ToListAsync();
+
+                    foreach (var vi in variantImagesToDelete)
+                    {
+                        var physicalPath = Path.Combine(_env.WebRootPath, vi.ImageUrl.TrimStart('/'));
+                        if (System.IO.File.Exists(physicalPath))
+                            System.IO.File.Delete(physicalPath);
+                        _context.ProductVariantImages.Remove(vi);
+                    }
+                    _logger.LogInformation($"Deleted {variantImagesToDelete.Count} variant images by ID");
+                }
+
+                // ---------- Variant updates ----------
+                var existingVariants = product.Variants.ToDictionary(v => (v.Color, v.Size));
+                var matchedExistingVariantIds = new HashSet<int>();
+                var newVariantsList = new List<ProductVariant>();
+                var variantIdsInOrder = new List<int>();
+
+                for (int i = 0; i < dto.VariantColors.Count; i++)
+                {
+                    var color = dto.VariantColors[i];
+                    var size = dto.VariantSizes[i];
+                    var stock = dto.VariantStockQuantities[i];
+                    var key = (color, size);
+
+                    if (existingVariants.TryGetValue(key, out var existingVariant))
+                    {
+                        existingVariant.StockQuantity = stock;
+                        variantIdsInOrder.Add(existingVariant.Id);
+                        matchedExistingVariantIds.Add(existingVariant.Id);
+                        _logger.LogInformation($"Matched existing variant ID {existingVariant.Id} for {color}/{size}");
+                    }
+                    else
+                    {
+                        var newVariant = new ProductVariant
+                        {
+                            ProductId = product.Id,
+                            Color = color,
+                            Size = size,
+                            StockQuantity = stock
+                        };
+                        newVariantsList.Add(newVariant);
+                        variantIdsInOrder.Add(-1);
+                        _logger.LogInformation($"New variant to create for {color}/{size}");
+                    }
+                }
+
+                // Save new variants and add their IDs to matched set
+                if (newVariantsList.Any())
+                {
+                    _context.ProductVariants.AddRange(newVariantsList);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"Saved {newVariantsList.Count} new variants.");
+
+                    int newIdx = 0;
+                    for (int i = 0; i < variantIdsInOrder.Count; i++)
+                    {
+                        if (variantIdsInOrder[i] == -1)
+                        {
+                            variantIdsInOrder[i] = newVariantsList[newIdx].Id;
+                            matchedExistingVariantIds.Add(newVariantsList[newIdx].Id); // ← المفتاح
+                            _logger.LogInformation($"New variant ID {newVariantsList[newIdx].Id} assigned to index {i}");
+                            newIdx++;
+                        }
+                    }
+                }
+
+                // Remove variants that are no longer present and have no orders
+                var variantsToRemove = product.Variants
+                    .Where(v => !matchedExistingVariantIds.Contains(v.Id))
+                    .ToList();
+
+                _logger.LogInformation($"Variants to remove: {variantsToRemove.Count}");
+                foreach (var variant in variantsToRemove)
+                {
+                    if (!variant.OrderItems.Any())
+                    {
+                        // Delete associated images physically
+                        if (variant.Images != null)
+                        {
+                            foreach (var img in variant.Images)
+                            {
+                                var physPath = Path.Combine(_env.WebRootPath, img.ImageUrl.TrimStart('/'));
+                                if (System.IO.File.Exists(physPath))
+                                    System.IO.File.Delete(physPath);
+                            }
+                        }
+                        _context.ProductVariants.Remove(variant);
+                        _logger.LogInformation($"Removed variant ID {variant.Id}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Variant ID {variant.Id} with orders cannot be removed.");
+                    }
+                }
+
+                // ---------- New variant images ----------
+                if (dto.VariantImageFiles?.Any() == true)
+                {
+                    _logger.LogInformation($"Processing {dto.VariantImageFiles.Count} variant image files");
+                    for (int fileIdx = 0; fileIdx < dto.VariantImageFiles.Count; fileIdx++)
+                    {
+                        var file = dto.VariantImageFiles[fileIdx];
+                        var variantIndex = dto.VariantImageIndices[fileIdx];
+                        var variantId = variantIdsInOrder[variantIndex];
+
+                        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                        if (!allowedExtensions.Contains(extension))
+                            return BadRequest($"Invalid file type for variant image: {extension}");
+
+                        const long maxFileSize = 5 * 1024 * 1024;
+                        if (file.Length > maxFileSize)
+                            return BadRequest($"Variant image file {file.FileName} exceeds 5MB.");
+
+                        var fileName = $"{Guid.NewGuid()}{extension}";
+                        var uploadPath = Path.Combine("uploads", "variantimages", fileName);
+                        var fullPath = Path.Combine(_env.WebRootPath, uploadPath);
+
+                        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+                        using var stream = new FileStream(fullPath, FileMode.Create);
+                        await file.CopyToAsync(stream);
+
+                        _context.ProductVariantImages.Add(new ProductVariantImage
+                        {
+                            ProductVariantId = variantId,
+                            ImageUrl = $"/{uploadPath.Replace("\\", "/")}"
+                        });
+                        _logger.LogInformation($"Added image {fileName} for variant ID {variantId}");
+                    }
+                }
 
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                _logger.LogInformation("Product updated successfully");
+
                 return Ok(new { Message = "Product updated successfully", product.Id });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating product");
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error updating product with flat DTO");
                 return BadRequest("An error occurred while updating the product");
             }
         }
-
-        private async Task UpdateProductVariants(Product product, List<VariantCreateDto> newVariants)
-        {
-            var existingVariants = product.Variants.ToList();
-            var variantsWithOrders = new List<ProductVariant>();
-            var variantsToRemove = new List<ProductVariant>();
-            var variantsToUpdate = new List<ProductVariant>();
-            var variantsToAdd = new List<ProductVariant>();
-
-            // Separate variants with and without orders
-            foreach (var existingVariant in existingVariants)
-            {
-                if (existingVariant.OrderItems.Any())
-                {
-                    variantsWithOrders.Add(existingVariant);
-                }
-                else
-                {
-                    variantsToRemove.Add(existingVariant);
-                }
-            }
-
-            // Match existing variants with new variant data
-            foreach (var newVariant in newVariants)
-            {
-                // Try to find existing variant with same color/size
-                var existingVariant = existingVariants
-                    .FirstOrDefault(v =>
-                        v.Color == newVariant.Color &&
-                        v.Size == newVariant.Size);
-
-                if (existingVariant != null)
-                {
-                    // Update existing variant
-                    existingVariant.StockQuantity = newVariant.StockQuantity;
-                    variantsToUpdate.Add(existingVariant);
-
-                    // Remove from removal list if it was there
-                    variantsToRemove.Remove(existingVariant);
-                }
-                else
-                {
-                    // Create new variant
-                    variantsToAdd.Add(new ProductVariant
-                    {
-                        ProductId = product.Id,
-                        Color = newVariant.Color,
-                        Size = newVariant.Size,
-                        StockQuantity = newVariant.StockQuantity
-                    });
-                }
-            }
-
-            // Remove only variants that don't have orders and aren't being updated
-            var finalVariantsToRemove = variantsToRemove
-                .Where(v => !variantsToUpdate.Contains(v))
-                .ToList();
-
-            _context.ProductVariants.RemoveRange(finalVariantsToRemove);
-            _context.ProductVariants.AddRange(variantsToAdd);
-
-            // Log warning for variants with orders that couldn't be modified
-            var preservedVariantsCount = variantsWithOrders.Count;
-            if (preservedVariantsCount > 0)
-            {
-                _logger.LogWarning($"Preserved {preservedVariantsCount} variants with existing orders for product {product.Id}");
-            }
-        }
-
 
         [HttpDelete("Delete/{id}")]
         public async Task<ActionResult> Delete(int id)
