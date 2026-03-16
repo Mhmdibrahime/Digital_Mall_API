@@ -186,7 +186,128 @@ namespace Digital_Mall_API.Controllers.User
                 Reels = reels
             });
         }
+        [HttpGet("brand-feedbacks/{brandId}")]
+        public async Task<IActionResult> GetBrandFeedbacks(
+    string brandId,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 10,
+    [FromQuery] int? rating = null,
+    [FromQuery] string sortBy = "newest") // newest, oldest, highest-rating, lowest-rating
+        {
+            // Check if brand exists
+            var brand = await _context.Brands
+                .FirstOrDefaultAsync(b => b.Id == brandId && b.Status == "Active");
+            if (brand == null)
+                return NotFound(new { message = "Brand not found" });
 
+            // Base query - get all feedbacks for products belonging to this brand
+            var query = _context.ProductFeedbacks
+                .Include(f => f.Product)
+                .Include(f => f.User)
+                .Where(f => f.Product.BrandId == brandId && f.Product.IsActive)
+                .AsQueryable();
+
+            // Apply rating filter if provided
+            if (rating.HasValue)
+            {
+                query = query.Where(f => f.Rating == rating.Value);
+            }
+
+            // Apply sorting
+            query = sortBy.ToLower() switch
+            {
+                "oldest" => query.OrderBy(f => f.CreatedAt),
+                "highest-rating" => query.OrderByDescending(f => f.Rating).ThenByDescending(f => f.CreatedAt),
+                "lowest-rating" => query.OrderBy(f => f.Rating).ThenByDescending(f => f.CreatedAt),
+                _ => query.OrderByDescending(f => f.CreatedAt) // "newest" is default
+            };
+
+            // Get total count for pagination
+            var totalCount = await query.CountAsync();
+
+            // Get rating statistics
+            var ratingStats = await _context.ProductFeedbacks
+                .Where(f => f.Product.BrandId == brandId && f.Product.IsActive)
+                .GroupBy(f => 1)
+                .Select(g => new
+                {
+                    AverageRating = g.Average(f => f.Rating),
+                    TotalReviews = g.Count(),
+                    RatingDistribution = new
+                    {
+                        Rating5 = g.Count(f => f.Rating == 5),
+                        Rating4 = g.Count(f => f.Rating == 4),
+                        Rating3 = g.Count(f => f.Rating == 3),
+                        Rating2 = g.Count(f => f.Rating == 2),
+                        Rating1 = g.Count(f => f.Rating == 1)
+                    }
+                })
+                .FirstOrDefaultAsync() ?? new
+                {
+                    AverageRating = 0.0,
+                    TotalReviews = 0,
+                    RatingDistribution = new
+                    {
+                        Rating5 = 0,
+                        Rating4 = 0,
+                        Rating3 = 0,
+                        Rating2 = 0,
+                        Rating1 = 0
+                    }
+                };
+
+            // Apply pagination
+            var feedbacks = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(f => new
+                {
+                    f.Id,
+                    f.Rating,
+                    f.Comment,
+                    f.ImageUrl,
+                    f.CreatedAt,
+                    Product = new
+                    {
+                        f.Product.Id,
+                        f.Product.Name,
+                        MainImage = f.Product.Images.FirstOrDefault().ImageUrl
+                    },
+                    User = new
+                    {
+                        f.User.Id,
+                        f.User.FullName
+                    }
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                BrandId = brandId,
+                BrandName = brand.OfficialName,
+                Statistics = new
+                {
+                    ratingStats.AverageRating,
+                    ratingStats.TotalReviews,
+                    ratingStats.RatingDistribution
+                },
+                Pagination = new
+                {
+                    CurrentPage = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount,
+                    TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                    HasNextPage = page < (int)Math.Ceiling(totalCount / (double)pageSize),
+                    HasPreviousPage = page > 1
+                },
+                Filters = new
+                {
+                    AppliedRating = rating,
+                    AppliedSort = sortBy
+                },
+                Feedbacks = feedbacks
+            });
+        }
         [HttpPost("follow-brand/{brandId}")]
         public async Task<IActionResult> FollowBrand(string brandId)
         {

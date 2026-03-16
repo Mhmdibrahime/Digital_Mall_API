@@ -1123,10 +1123,11 @@ namespace Digital_Mall_API.Controllers
                 Status = "Pending",       // Requires admin approval
                 IsCertified = false,
                 CreatedAt = DateTime.UtcNow,
-                Online = false,           // Defaults
-                Ofline = false,            // Defaults (typo in model)
+                Online = dto.Online,           // Defaults
+                Ofline = dto.Offline,            // Defaults (typo in model)
                 Password=customer.Password,
             };
+
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -1222,7 +1223,7 @@ namespace Digital_Mall_API.Controllers
                     await _userManager.RemoveFromRoleAsync(user, "Customer");
 
                 // Ensure role exists (could be "Model" or "FashionModel")
-                string modelRole = "Model";
+                string modelRole = "FashionModel";
                 if (!await _roleManager.RoleExistsAsync(modelRole))
                     await _roleManager.CreateAsync(new IdentityRole<Guid>(modelRole));
 
