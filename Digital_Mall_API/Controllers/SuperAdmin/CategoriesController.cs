@@ -25,7 +25,6 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             _environment = environment;
         }
 
-
         [HttpGet("categories")]
         public async Task<ActionResult<IEnumerable<CategoryResponseDto>>> SearchCategories([FromQuery] string search = "")
         {
@@ -114,9 +113,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             try
             {
                 var categories = await _context.Categories
-                    .Where(c => c.SubCategories.Any()) 
+                    .Where(c => c.SubCategories.Any())
                     .OrderBy(c => c.EnglishName)
-                    .ThenBy(c=>c.ArabicName)
+                    .ThenBy(c => c.ArabicName)
                     .Select(c => new
                     {
                         Id = c.Id,
@@ -195,7 +194,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         ArabicName = c.ArabicName,
                         Description = c.Description,
                         ImageUrl = c.ImageUrl,
-                        
+
                         SubCategories = c.SubCategories.Select(sc => new SubCategoryResponseDto
                         {
                             Id = sc.Id,
@@ -226,15 +225,23 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         {
             try
             {
-                var category = await _context.Categories.FindAsync(request.CategoryId);
+                // Use helper method to get the category ID whether the provided ID is category or subcategory
+                var resolvedCategoryId = await ResolveCategoryId(request.CategoryId);
+
+                if (!resolvedCategoryId.HasValue)
+                {
+                    return NotFound(new { message = "Selected category or subcategory not found." });
+                }
+
+                var category = await _context.Categories.FindAsync(resolvedCategoryId.Value);
                 if (category == null)
                 {
-                    return NotFound(new { message = "Selected category not found." });
+                    return NotFound(new { message = "Category not found." });
                 }
 
                 var existingSubCategory = await _context.SubCategories
                     .FirstOrDefaultAsync(sc =>
-                        sc.CategoryId == request.CategoryId &&
+                        sc.CategoryId == resolvedCategoryId.Value &&
                         sc.EnglishName.ToLower() == request.Name.ToLower() || sc.ArabicName.ToLower() == request.ArabicName.ToLower());
 
                 if (existingSubCategory != null)
@@ -252,7 +259,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 {
                     EnglishName = request.Name,
                     ArabicName = request.ArabicName,
-                    CategoryId = request.CategoryId,
+                    CategoryId = resolvedCategoryId.Value,
                     ImageUrl = imageUrl
                 };
 
@@ -328,6 +335,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 return StatusCode(500, new { message = "An error occurred while retrieving the category", error = ex.Message });
             }
         }
+
         [HttpPut("edit-category/{id}")]
         public async Task<ActionResult<CategoryResponseDto>> EditCategory(int id, [FromForm] EditCategoryDto request)
         {
@@ -430,10 +438,18 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     return NotFound(new { message = "Subcategory not found" });
                 }
 
-                // Check if name already exists in the same category (excluding current subcategory)
+                // Use helper method to resolve the category ID from the request
+                var resolvedCategoryId = await ResolveCategoryId(request.CategoryId);
+
+                if (!resolvedCategoryId.HasValue)
+                {
+                    return NotFound(new { message = "Selected category or subcategory not found." });
+                }
+
+                // Check if name already exists in the resolved category (excluding current subcategory)
                 var existingSubCategory = await _context.SubCategories
                     .FirstOrDefaultAsync(sc =>
-                        sc.CategoryId == request.CategoryId &&
+                        sc.CategoryId == resolvedCategoryId.Value &&
                         sc.EnglishName.ToLower() == request.Name.ToLower() &&
                         sc.ArabicName.ToLower() == request.ArabicName.ToLower() &&
                         sc.Id != id);
@@ -443,10 +459,10 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     return Conflict(new { message = "A subcategory with this name already exists in the selected category." });
                 }
 
-                // Update subcategory properties
+                // Update subcategory properties with resolved category ID
                 subCategory.EnglishName = request.Name;
                 subCategory.ArabicName = request.ArabicName;
-                subCategory.CategoryId = request.CategoryId;
+                subCategory.CategoryId = resolvedCategoryId.Value;
 
                 // Handle image update if new image is provided
                 if (request.Image != null && request.Image.Length > 0)
@@ -501,9 +517,6 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             }
         }
 
-     
-
-
         [HttpGet("subcategory/{id}/details")]
         public async Task<ActionResult<SubCategoryDetailDto>> GetSubCategoryDetails(int id)
         {
@@ -518,7 +531,6 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         Name = sc.EnglishName,
                         ArabicName = sc.ArabicName,
                         ImageUrl = sc.ImageUrl,
-
                         CategoryId = sc.CategoryId,
                         CategoryName = sc.Category.EnglishName,
                         ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive),
@@ -543,23 +555,71 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             }
         }
 
+        #region Helper Methods
+
+        /// <summary>
+        /// Helper method to resolve whether the provided ID is a category ID or subcategory ID
+        /// and return the appropriate category ID
+        /// </summary>
+        /// <param name="id">The ID to check (could be category ID or subcategory ID)</param>
+        /// <returns>The category ID if found, null otherwise</returns>
+        private async Task<int?> ResolveCategoryId(int id)
+        {
+            // First check if it's a category
+            var category = await _context.Categories.FindAsync(id);
+            if (category != null)
+            {
+                return category.Id;
+            }
+
+            // If not a category, check if it's a subcategory
+            var subCategory = await _context.SubCategories
+                .Include(sc => sc.Category)
+                .FirstOrDefaultAsync(sc => sc.Id == id);
+
+            if (subCategory?.Category != null)
+            {
+                return subCategory.Category.Id;
+            }
+
+            // Not found as either category or subcategory
+            return null;
+        }
+
+        /// <summary>
+        /// Alternative helper method that returns both the resolved ID and the type
+        /// </summary>
+        private async Task<(int? CategoryId, string EntityType)> ResolveIdType(int id)
+        {
+            // Check if it's a category
+            var category = await _context.Categories.FindAsync(id);
+            if (category != null)
+            {
+                return (category.Id, "Category");
+            }
+
+            // Check if it's a subcategory
+            var subCategory = await _context.SubCategories
+                .Include(sc => sc.Category)
+                .FirstOrDefaultAsync(sc => sc.Id == id);
+
+            if (subCategory?.Category != null)
+            {
+                return (subCategory.Category.Id, "SubCategory");
+            }
+
+            return (null, "Unknown");
+        }
 
         private async Task UpdateCategorySubcategories(Category category, List<int> newSubCategoryIds)
         {
             // Get current subcategories
             var currentSubCategoryIds = category.SubCategories.Select(sc => sc.Id).ToList();
 
-            //// Subcategories to remove from this category
-            //var subCategoriesToRemove = category.SubCategories
-            //    .Where(sc => !newSubCategoryIds.Contains(sc.Id))
-            //    .ToList();
-
             // Subcategories to add to this category
             var subCategoriesToAdd = await _context.SubCategories
                 .Where(sc => newSubCategoryIds.Contains(sc.Id) && !currentSubCategoryIds.Contains(sc.Id))
                 .ToListAsync();
-
-           
 
             // Add subcategories to this category
             foreach (var subCategory in subCategoriesToAdd)
@@ -587,6 +647,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 Console.WriteLine($"Warning: Failed to delete old image: {ex.Message}");
             }
         }
+
         private async Task<string> SaveImage(IFormFile image, string folder)
         {
             try
@@ -627,5 +688,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 throw new Exception($"Failed to save image: {ex.Message}", ex);
             }
         }
+
+        #endregion
     }
 }
