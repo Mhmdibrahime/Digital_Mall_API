@@ -349,6 +349,48 @@ namespace Digital_Mall_API.Controllers.User
             });
         }
 
+        [HttpGet("subsubcategories")]
+        public async Task<IActionResult> GetSubSubCategoriesBySubCategory(
+    [FromQuery] int subCategoryId)
+        {
+            var subCategory = await _context.SubCategories
+                .Include(sc => sc.SubSubCategories)
+                .Include(sc => sc.Category)
+                .FirstOrDefaultAsync(sc => sc.Id == subCategoryId);
+
+            if (subCategory == null)
+                return NotFound(new { message = "SubCategory not found" });
+
+            var subSubCategories = subCategory.SubSubCategories
+                .Select(ssc => new
+                {
+                    ssc.Id,
+                    ssc.EnglishName,
+                    ssc.ArabicName,
+                    ssc.ImageUrl
+                })
+                .ToList();
+
+            return Ok(new
+            {
+                SubCategory = new
+                {
+                    subCategory.Id,
+                    subCategory.EnglishName,
+                    subCategory.ArabicName,
+                    subCategory.ImageUrl,
+                    Category = new
+                    {
+                        subCategory.Category.Id,
+                        subCategory.Category.EnglishName,
+                        subCategory.Category.ArabicName,
+                        subCategory.Category.ImageUrl
+                    }
+                },
+                SubSubCategories = subSubCategories
+            });
+        }
+
         [HttpGet("category-details")]
         public async Task<IActionResult> GetCategoryWithProducts(
    [FromQuery] int categoryId,
@@ -494,6 +536,7 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
+                .Include(p => p.SubSubCategory)
                 .Where(p => p.SubSubCategory.SubCategoryId == subCategoryId && p.IsActive && p.Brand.Status == "Active" )
                 .AsQueryable();
 
@@ -563,6 +606,118 @@ namespace Digital_Mall_API.Controllers.User
                     pageSize = PageSize,
                     totalItems,
                     totalPages = (int)Math.Ceiling(totalItems / (double)PageSize),
+                    items = products
+                }
+            });
+        }
+        [HttpGet("subsubcategory-products")]
+        public async Task<IActionResult> GetProductsBySubSubCategory(
+    [FromQuery] int subSubCategoryId,
+    [FromQuery] string? gender,
+    [FromQuery] string? size,
+    [FromQuery] decimal? minPrice,
+    [FromQuery] decimal? maxPrice,
+    [FromQuery] string? sort,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20)
+        {
+            if (page < 1) page = 1;
+
+            // جلب الـ SubSubCategory مع الـ SubCategory والـ Category المرتبطة بها
+            var subSubCategory = await _context.SubSubCategories
+                .Include(ssc => ssc.SubCategory)
+                    .ThenInclude(sc => sc.Category)
+                .FirstOrDefaultAsync(ssc => ssc.Id == subSubCategoryId);
+
+            if (subSubCategory == null)
+                return NotFound(new { message = "SubSubCategory not found" });
+
+            // بناء الاستعلام لجلب المنتجات النشطة التابعة لهذا الـ SubSubCategory
+            var query = _context.Products
+                .Include(p => p.Brand)
+                .Include(p => p.ProductDiscount)
+                .Include(p => p.Images)
+                .Include(p => p.Variants)
+                .Where(p => p.SubSubCategoryId == subSubCategoryId
+                            && p.IsActive
+                            && p.Brand.Status == "Active")
+                .AsQueryable();
+
+            // تطبيق الفلاتر
+            if (!string.IsNullOrEmpty(gender))
+                query = query.Where(p => p.Gender.ToLower() == gender.ToLower());
+
+            if (!string.IsNullOrEmpty(size))
+                query = query.Where(p => p.Variants.Any(v => v.Size.ToLower() == size.ToLower()));
+
+            if (minPrice.HasValue)
+                query = query.Where(p => p.Price >= minPrice.Value);
+            if (maxPrice.HasValue)
+                query = query.Where(p => p.Price <= maxPrice.Value);
+
+            // الترتيب
+            query = sort?.ToLower() switch
+            {
+                "price_asc" => query.OrderBy(p => p.Price),
+                "price_desc" => query.OrderByDescending(p => p.Price),
+                "name_asc" => query.OrderBy(p => p.Name),
+                "name_desc" => query.OrderByDescending(p => p.Name),
+                _ => query.OrderByDescending(p => p.CreatedAt)
+            };
+
+            // حساب العدد الإجمالي قبل التقسيم
+            var totalItems = await query.CountAsync();
+
+            // جلب المنتجات مع التقسيم
+            var products = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(p => new DiscountedProductDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    BrandName = p.Brand != null ? p.Brand.OfficialName : null,
+                    ImageUrl = p.Images.FirstOrDefault() != null ? p.Images.First().ImageUrl : null,
+                    OriginalPrice = p.Price,
+                    DiscountValue = p.ProductDiscount != null ? p.ProductDiscount.DiscountValue : 0,
+                    DiscountedPrice = p.ProductDiscount != null
+                        ? p.Price - (p.Price * p.ProductDiscount.DiscountValue / 100)
+                        : p.Price,
+                    DiscountStatus = p.ProductDiscount != null ? "Active" : "None",
+                    CreatedAt = p.CreatedAt,
+                    StockQuantity = p.Variants.Sum(v => v.StockQuantity)
+                })
+                .ToListAsync();
+
+           
+            return Ok(new
+            {
+                SubSubCategory = new
+                {
+                    subSubCategory.Id,
+                    subSubCategory.EnglishName,
+                    subSubCategory.ArabicName,
+                    subSubCategory.ImageUrl,
+                    SubCategory = new
+                    {
+                        subSubCategory.SubCategory.Id,
+                        subSubCategory.SubCategory.EnglishName,
+                        subSubCategory.SubCategory.ArabicName,
+                        Category = new
+                        {
+                            subSubCategory.SubCategory.Category.Id,
+                            subSubCategory.SubCategory.Category.EnglishName,
+                            subSubCategory.SubCategory.Category.ArabicName,
+                            subSubCategory.SubCategory.Category.ImageUrl
+                        }
+                    }
+                },
+                Products = new
+                {
+                    page,
+                    pageSize,
+                    totalItems,
+                    totalPages = (int)Math.Ceiling(totalItems / (double)pageSize),
                     items = products
                 }
             });
