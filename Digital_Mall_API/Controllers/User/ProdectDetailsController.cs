@@ -27,8 +27,9 @@ namespace Digital_Mall_API.Controllers.User
         {
             var product = await _context.Products
                 .Include(p => p.Brand)
-                .Include(p => p.SubCategory)
-                    .ThenInclude(sc => sc.Category)
+                .Include(p => p.SubSubCategory)
+        .ThenInclude(ssc => ssc.SubCategory)
+            .ThenInclude(sc => sc.Category)
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
@@ -57,6 +58,8 @@ namespace Digital_Mall_API.Controllers.User
                 v.Color,
                 v.Size,
                 v.StockQuantity,
+                v.ColorName,
+                v.Price,
                 Images = v.Images.Select(img => img.ImageUrl).ToList()
             }).ToList();
 
@@ -80,10 +83,12 @@ namespace Digital_Mall_API.Controllers.User
                 product.Name,
                 Description = product.Description,
                 BrandName = product.Brand?.OfficialName,
-                Category = product.SubCategory?.Category?.EnglishName,
-                CategoryInArabic = product.SubCategory?.Category?.ArabicName,
-                SubCategory = product.SubCategory?.EnglishName,
-                SubCategoryInArabic = product.SubCategory?.ArabicName,
+                Category = product.SubSubCategory.SubCategory?.Category?.EnglishName,
+                CategoryInArabic = product.SubSubCategory.SubCategory?.Category?.ArabicName,
+                SubCategory = product.SubSubCategory.SubCategory?.EnglishName,
+                SubCategoryInArabic = product.SubSubCategory.SubCategory?.ArabicName,
+                SubSubCategoryInArabic=product.SubSubCategory.ArabicName,
+                SubSubCategoryInEnglish=product.SubSubCategory.EnglishName,
                 OriginalPrice = originalPrice,
                 DiscountValue = discountValue,
                 DiscountedPrice = discountedPrice,

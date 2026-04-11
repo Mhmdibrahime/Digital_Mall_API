@@ -32,8 +32,9 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         {
             var query = _context.Products
                 .Include(p => p.Brand)
-                .Include(p => p.SubCategory)
-                .ThenInclude(sc => sc.Category)
+                .Include(p => p.SubSubCategory)
+        .ThenInclude(ssc => ssc.SubCategory)
+            .ThenInclude(sc => sc.Category)
                 .Include(p => p.Images)
                 .Where(p => p.IsActive);
 
@@ -55,8 +56,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                 {
                     Id = p.Id,
                     Name = p.Name,
-                    Category = p.SubCategory.EnglishName,
-                    CategoryInArabic = p.SubCategory.ArabicName,
+                    Category = p.SubSubCategory.SubCategory.EnglishName,
+                    CategoryInArabic = p.SubSubCategory.SubCategory.ArabicName,
                     ProductId = $"prod_{p.Id:D3}",
                     Brand = p.Brand.OfficialName,
                     Status = p.IsTrend ? "Trending" : "Regular",
@@ -83,16 +84,17 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         {
             var product = await _context.Products
                 .Include(p => p.Brand)
-                .Include(p => p.SubCategory)
-                .ThenInclude(sc => sc.Category)
+                .Include(p => p.SubSubCategory)
+        .ThenInclude(ssc => ssc.SubCategory)
+            .ThenInclude(sc => sc.Category)
                 .Include(p => p.Images)
                 .Where(p => p.IsActive && p.Id == id)
                 .Select(p => new ProductResponseDto
                 {
                     Id = p.Id,
                     Name = p.Name,
-                    Category = p.SubCategory.EnglishName,
-                    CategoryInArabic = p.SubCategory.ArabicName,
+                    Category = p.SubSubCategory.SubCategory.EnglishName,
+                    CategoryInArabic = p.SubSubCategory.SubCategory.ArabicName,
                     ProductId = $"prod_{p.Id:D3}",
                     Brand = p.Brand.OfficialName,
                     Status = p.IsTrend ? "Trending" : "Regular",
@@ -161,8 +163,8 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
             {
                 Id = product.Id,
                 Name = product.Name,
-                Category = product.SubCategory?.EnglishName ?? "N/A",
-                CategoryInArabic = product.SubCategory?.ArabicName ?? "غير معروف",
+                Category = product.SubSubCategory.SubCategory?.EnglishName ?? "N/A",
+                CategoryInArabic = product.SubSubCategory.SubCategory?.ArabicName ?? "غير معروف",
                 ProductId = $"prod_{product.Id:D3}",
                 Brand = product.Brand?.OfficialName ?? "N/A",
                 Status = product.IsTrend ? "Trending" : "Regular",

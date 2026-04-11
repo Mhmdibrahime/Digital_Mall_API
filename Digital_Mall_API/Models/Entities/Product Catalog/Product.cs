@@ -13,9 +13,9 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         [Required]
         public string BrandId { get; set; }
 
-        [Required]
-        public int SubCategoryId { get; set; }
-
+        
+        //public int SubCategoryId { get; set; }
+        public int? SubSubCategoryId { get; set; }
         [Required]
         [StringLength(200)]
         public string Name { get; set; }
@@ -35,7 +35,9 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
         [StringLength(20)]
         public string Gender { get; set; } = "Unisex";
         public virtual Brand? Brand { get; set; }
-        public virtual SubCategory? SubCategory { get; set; }
+        // public virtual SubCategory? SubCategory { get; set; }
+     
+        public virtual SubSubCategory? SubSubCategory { get; set; }
         public virtual ProductDiscount? ProductDiscount { get; set; } 
 
         public virtual List<ProductVariant>? Variants { get; set; } = new List<ProductVariant>();

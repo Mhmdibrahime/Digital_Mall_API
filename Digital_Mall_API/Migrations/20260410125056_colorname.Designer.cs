@@ -4,6 +4,7 @@ using Digital_Mall_API.Models.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Digital_Mall_API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260410125056_colorname")]
+    partial class colorname
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -657,7 +660,7 @@ namespace Digital_Mall_API.Migrations
                     b.Property<int?>("ProductDiscountId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("SubSubCategoryId")
+                    b.Property<int>("SubCategoryId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -666,7 +669,7 @@ namespace Digital_Mall_API.Migrations
 
                     b.HasIndex("ProductDiscountId");
 
-                    b.HasIndex("SubSubCategoryId");
+                    b.HasIndex("SubCategoryId");
 
                     b.ToTable("Products");
                 });
@@ -828,41 +831,6 @@ namespace Digital_Mall_API.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("SubCategories");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.SubSubCategory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ArabicName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("EnglishName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ImageUrl")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("SubCategoryId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubCategoryId");
-
-                    b.ToTable("SubSubCategories");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.Discount", b =>
@@ -2181,16 +2149,17 @@ namespace Digital_Mall_API.Migrations
                         .HasForeignKey("ProductDiscountId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Digital_Mall_API.Models.Entities.Product_Catalog.SubSubCategory", "SubSubCategory")
+                    b.HasOne("Digital_Mall_API.Models.Entities.Product_Catalog.SubCategory", "SubCategory")
                         .WithMany("Products")
-                        .HasForeignKey("SubSubCategoryId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .HasForeignKey("SubCategoryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Brand");
 
                     b.Navigation("ProductDiscount");
 
-                    b.Navigation("SubSubCategory");
+                    b.Navigation("SubCategory");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.ProductFeedback", b =>
@@ -2254,17 +2223,6 @@ namespace Digital_Mall_API.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.SubSubCategory", b =>
-                {
-                    b.HasOne("Digital_Mall_API.Models.Entities.Product_Catalog.SubCategory", "SubCategory")
-                        .WithMany("SubSubCategories")
-                        .HasForeignKey("SubCategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SubCategory");
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Promotions.ProductDiscount", b =>
@@ -2589,11 +2547,6 @@ namespace Digital_Mall_API.Migrations
                 });
 
             modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.SubCategory", b =>
-                {
-                    b.Navigation("SubSubCategories");
-                });
-
-            modelBuilder.Entity("Digital_Mall_API.Models.Entities.Product_Catalog.SubSubCategory", b =>
                 {
                     b.Navigation("Products");
                 });

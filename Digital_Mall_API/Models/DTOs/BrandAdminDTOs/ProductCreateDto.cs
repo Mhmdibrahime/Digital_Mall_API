@@ -19,19 +19,21 @@
         public string Description { get; set; }
         public decimal Price { get; set; }
         public bool IsActive { get; set; }
-        public int SubCategoryId { get; set; }
+        public int SubSubCategoryId { get; set; }
         public string Gender { get; set; } = "Unisex";
 
-        // Product-level images
+        // Product images
         public List<IFormFile>? Images { get; set; }
 
-        // Variant data – parallel lists (each index = one variant)
+        // Variant data – parallel lists
         public List<string> VariantColors { get; set; } = new();
+        public List<string>? VariantColorNames { get; set; } = new();   // اسم اللون (اختياري)
         public List<string> VariantSizes { get; set; } = new();
         public List<int> VariantStockQuantities { get; set; } = new();
+        public List<decimal?>? VariantPrices { get; set; } = new();      // سعر خاص للمتغير (اختياري)
 
-        // Variant images – flattened list with index mapping
+        // Variant images – flattened
         public List<IFormFile> VariantImageFiles { get; set; } = new();
-        public List<int> VariantImageIndices { get; set; } = new(); // maps each file to a variant index (0-based)
+        public List<int> VariantImageIndices { get; set; } = new();
     }
 }

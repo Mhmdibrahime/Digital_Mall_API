@@ -52,7 +52,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         Description = c.Description,
                         ImageUrl = c.ImageUrl,
                         TotalProducts = c.SubCategories.Sum(sc =>
-                            _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)),
+                            _context.Products.Count(p => p.SubSubCategory.SubCategoryId == sc.Id && p.IsActive)),
                         SubCategories = c.SubCategories.Select(sc => new SubCategoryResponseDto
                         {
                             Id = sc.Id,
@@ -61,7 +61,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                             ImageUrl = sc.ImageUrl,
                             CategoryId = sc.CategoryId,
                             CategoryName = c.EnglishName,
-                            ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
+                            ProductCount = _context.Products.Count(p => p.SubSubCategory.SubCategoryId == sc.Id && p.IsActive)
                         }).ToList()
                     })
                     .ToListAsync();
@@ -203,7 +203,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                             ImageUrl = sc.ImageUrl,
                             CategoryId = sc.CategoryId,
                             CategoryName = c.EnglishName,
-                            ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
+                            ProductCount = _context.Products.Count(p => p.SubSubCategoryId == sc.Id && p.IsActive)
                         }).ToList(),
                     })
                     .FirstOrDefaultAsync();
@@ -309,7 +309,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         Description = c.Description,
                         ImageUrl = c.ImageUrl,
                         TotalProducts = c.SubCategories.Sum(sc =>
-                            _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)),
+                            _context.Products.Count(p => p.SubSubCategoryId == sc.Id && p.IsActive)),
                         SubCategories = c.SubCategories.Select(sc => new SubCategoryResponseDto
                         {
                             Id = sc.Id,
@@ -318,7 +318,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                             ImageUrl = sc.ImageUrl,
                             CategoryId = sc.CategoryId,
                             CategoryName = c.EnglishName,
-                            ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
+                            ProductCount = _context.Products.Count(p => p.SubSubCategoryId == sc.Id && p.IsActive)
                         }).ToList()
                     })
                     .FirstOrDefaultAsync();
@@ -398,7 +398,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         Description = c.Description,
                         ImageUrl = c.ImageUrl,
                         TotalProducts = c.SubCategories.Sum(sc =>
-                            _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)),
+                            _context.Products.Count(p => p.SubSubCategoryId == sc.Id && p.IsActive)),
                         SubCategories = c.SubCategories.Select(sc => new SubCategoryResponseDto
                         {
                             Id = sc.Id,
@@ -407,7 +407,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                             ImageUrl = sc.ImageUrl,
                             CategoryId = sc.CategoryId,
                             CategoryName = c.EnglishName,
-                            ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
+                            ProductCount = _context.Products.Count(p => p.SubSubCategoryId == sc.Id && p.IsActive)
                         }).ToList()
                     })
                     .FirstOrDefaultAsync();
@@ -501,7 +501,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         ImageUrl = sc.ImageUrl,
                         CategoryId = sc.CategoryId,
                         CategoryName = sc.Category.EnglishName,
-                        ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive)
+                        ProductCount = _context.Products.Count(p => p.SubSubCategoryId == sc.Id && p.IsActive)
                     })
                     .FirstOrDefaultAsync();
 
@@ -533,7 +533,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                         ImageUrl = sc.ImageUrl,
                         CategoryId = sc.CategoryId,
                         CategoryName = sc.Category.EnglishName,
-                        ProductCount = _context.Products.Count(p => p.SubCategoryId == sc.Id && p.IsActive),
+                        ProductCount = _context.Products.Count(p => p.SubSubCategoryId == sc.Id && p.IsActive),
                         HasImage = !string.IsNullOrEmpty(sc.ImageUrl)
                     })
                     .FirstOrDefaultAsync();
@@ -553,6 +553,188 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
                     error = ex.Message
                 });
             }
+        }
+
+        [HttpPost("createSubSubCategory")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<SubSubCategoryResponseDto>> CreateSubSubCategory([FromForm] CreateSubSubCategoryPopupDto dto)
+        {
+            try
+            {
+                // التحقق من وجود الـ SubCategory
+                var subCategory = await _context.SubCategories
+                    .Include(sc => sc.Category)
+                    .FirstOrDefaultAsync(sc => sc.Id == dto.SubCategoryId);
+                if (subCategory == null)
+                    return NotFound(new { message = "SubCategory not found." });
+
+                // التحقق من عدم وجود اسم مكرر تحت نفس الـ SubCategory
+                var existing = await _context.SubSubCategories
+                    .FirstOrDefaultAsync(ssc => ssc.SubCategoryId == dto.SubCategoryId &&
+                        (ssc.EnglishName.ToLower() == dto.Name.ToLower() ||
+                         (dto.ArabicName != null && ssc.ArabicName.ToLower() == dto.ArabicName.ToLower())));
+                if (existing != null)
+                    return Conflict(new { message = "SubSubCategory with same name already exists under this SubCategory." });
+
+                string? imageUrl = null;
+                if (dto.Image != null && dto.Image.Length > 0)
+                    imageUrl = await SaveImage(dto.Image, "subsubcategories");
+
+                var subSubCategory = new SubSubCategory
+                {
+                    EnglishName = dto.Name,
+                    ArabicName = dto.ArabicName,
+                    ImageUrl = imageUrl,
+                    SubCategoryId = dto.SubCategoryId
+                };
+
+                _context.SubSubCategories.Add(subSubCategory);
+                await _context.SaveChangesAsync();
+
+                var response = new SubSubCategoryResponseDto
+                {
+                    Id = subSubCategory.Id,
+                    Name = subSubCategory.EnglishName,
+                    ArabicName = subSubCategory.ArabicName,
+                  
+                    ImageUrl = subSubCategory.ImageUrl,
+                    SubCategoryId = subSubCategory.SubCategoryId,
+                    SubCategoryName = subCategory.EnglishName,
+                    ProductCount = 0
+                };
+
+                return CreatedAtAction(nameof(GetSubSubCategoryById), new { id = subSubCategory.Id }, response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error creating subsubcategory", error = ex.Message });
+            }
+        }
+
+        [HttpGet("subSubCategory/{id}")]
+        public async Task<ActionResult<SubSubCategoryResponseDto>> GetSubSubCategoryById(int id)
+        {
+            var subSubCategory = await _context.SubSubCategories
+                .Include(ssc => ssc.SubCategory)
+                .ThenInclude(sc => sc.Category)
+                .FirstOrDefaultAsync(ssc => ssc.Id == id);
+            if (subSubCategory == null)
+                return NotFound();
+
+            var productCount = await _context.Products
+                .CountAsync(p => p.SubSubCategoryId == id && p.IsActive); // سنضيف SubSubCategoryId لـ Product لاحقاً
+
+            return new SubSubCategoryResponseDto
+            {
+                Id = subSubCategory.Id,
+                Name = subSubCategory.EnglishName,
+                ArabicName = subSubCategory.ArabicName,
+                ImageUrl = subSubCategory.ImageUrl,
+                SubCategoryId = subSubCategory.SubCategoryId,
+                SubCategoryName = subSubCategory.SubCategory?.EnglishName,
+                ProductCount = productCount
+            };
+        }
+
+        [HttpGet("subSubCategories/bySubCategory/{subCategoryId}")]
+        public async Task<ActionResult<IEnumerable<SubSubCategoryResponseDto>>> GetSubSubCategoriesBySubCategory(int subCategoryId)
+        {
+            var subCategoryExists = await _context.SubCategories.AnyAsync(sc => sc.Id == subCategoryId);
+            if (!subCategoryExists)
+                return NotFound(new { message = "SubCategory not found." });
+
+            var subSubCategories = await _context.SubSubCategories
+                .Where(ssc => ssc.SubCategoryId == subCategoryId)
+                .Include(ssc => ssc.SubCategory)
+                .Select(ssc => new SubSubCategoryResponseDto
+                {
+                    Id = ssc.Id,
+                    Name = ssc.EnglishName,
+                    ArabicName = ssc.ArabicName,
+                   
+                    ImageUrl = ssc.ImageUrl,
+                    SubCategoryId = ssc.SubCategoryId,
+                    SubCategoryName = ssc.SubCategory!.EnglishName,
+                    ProductCount = _context.Products.Count(p => p.SubSubCategoryId == ssc.Id && p.IsActive)
+                })
+                .ToListAsync();
+
+            return Ok(subSubCategories);
+        }
+
+        [HttpPut("updateSubSubCategory/{id}")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<SubSubCategoryResponseDto>> UpdateSubSubCategory(int id, [FromForm] UpdateSubSubCategoryDto dto)
+        {
+            try
+            {
+                var subSubCategory = await _context.SubSubCategories
+                    .Include(ssc => ssc.SubCategory)
+                    .FirstOrDefaultAsync(ssc => ssc.Id == id);
+                if (subSubCategory == null)
+                    return NotFound();
+
+                if (!string.IsNullOrEmpty(dto.Name))
+                    subSubCategory.EnglishName = dto.Name;
+                if (dto.ArabicName != null)
+                    subSubCategory.ArabicName = dto.ArabicName;
+                if (dto.Description != null)
+                    subSubCategory.Description = dto.Description;
+
+                // معالجة الصورة
+                if (dto.RemoveImage && !string.IsNullOrEmpty(subSubCategory.ImageUrl))
+                {
+                    DeleteOldImage(subSubCategory.ImageUrl);
+                    subSubCategory.ImageUrl = null;
+                }
+                if (dto.Image != null && dto.Image.Length > 0)
+                {
+                    if (!string.IsNullOrEmpty(subSubCategory.ImageUrl))
+                        DeleteOldImage(subSubCategory.ImageUrl);
+                    subSubCategory.ImageUrl = await SaveImage(dto.Image, "subsubcategories");
+                }
+
+                await _context.SaveChangesAsync();
+
+                var productCount = await _context.Products.CountAsync(p => p.SubSubCategoryId == id && p.IsActive);
+                return new SubSubCategoryResponseDto
+                {
+                    Id = subSubCategory.Id,
+                    Name = subSubCategory.EnglishName,
+                    ArabicName = subSubCategory.ArabicName,
+                   
+                    ImageUrl = subSubCategory.ImageUrl,
+                    SubCategoryId = subSubCategory.SubCategoryId,
+                    SubCategoryName = subSubCategory.SubCategory?.EnglishName,
+                    ProductCount = productCount
+                };
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating subsubcategory", error = ex.Message });
+            }
+        }
+
+        [HttpDelete("deleteSubSubCategory/{id}")]
+        public async Task<ActionResult> DeleteSubSubCategory(int id)
+        {
+            var subSubCategory = await _context.SubSubCategories
+                .Include(ssc => ssc.Products)
+                .FirstOrDefaultAsync(ssc => ssc.Id == id);
+            if (subSubCategory == null)
+                return NotFound();
+
+            if (subSubCategory.Products != null && subSubCategory.Products.Any(p => p.IsActive))
+                return BadRequest(new { message = "Cannot delete subsubcategory because it has active products." });
+
+            // حذف الصورة الفعلية
+            if (!string.IsNullOrEmpty(subSubCategory.ImageUrl))
+                DeleteOldImage(subSubCategory.ImageUrl);
+
+            _context.SubSubCategories.Remove(subSubCategory);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "SubSubCategory deleted successfully." });
         }
 
         #region Helper Methods
@@ -690,5 +872,7 @@ namespace Digital_Mall_API.Controllers.SuperAdmin
         }
 
         #endregion
+
+
     }
 }

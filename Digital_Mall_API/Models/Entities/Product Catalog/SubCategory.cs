@@ -15,7 +15,7 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
 
         [StringLength(255)]
         public string ImageUrl { get; set; }
-
-        public ICollection<Product>? Products { get; set; }
+        public virtual List<SubSubCategory>? SubSubCategories { get; set; } = new List<SubSubCategory>();
+       // public ICollection<Product>? Products { get; set; }
     }
 }

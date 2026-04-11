@@ -1,5 +1,6 @@
 ﻿using Digital_Mall_API.Models.Entities.Orders___Shopping;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Digital_Mall_API.Models.Entities.Product_Catalog
 {
@@ -12,19 +13,21 @@ namespace Digital_Mall_API.Models.Entities.Product_Catalog
 
         [Required]
         [StringLength(50)]
-        public string Color { get; set; }
+        public string Color { get; set; }         
+
+        [StringLength(50)]
+        public string? ColorName { get; set; }     
 
         [Required]
         [StringLength(20)]
         public string Size { get; set; }
 
-       
-
         [Required]
         [Range(0, int.MaxValue)]
         public int StockQuantity { get; set; }
 
-        
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? Price { get; set; }       
 
         public virtual Product? Product { get; set; }
         public virtual List<OrderItem>? OrderItems { get; set; } = new List<OrderItem>();

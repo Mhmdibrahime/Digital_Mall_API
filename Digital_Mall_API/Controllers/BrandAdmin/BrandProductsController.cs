@@ -12,7 +12,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 {
     [ApiController]
     [Route("Brand/Management/[controller]")]
-    [Authorize(Roles = "Brand")]
+    //[Authorize(Roles = "Brand")]
 
     public class BrandProductsController : ControllerBase
     {
@@ -41,10 +41,12 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
             var query = _context.Products
                 .Where(p => p.BrandId == brandId)
-                .Include(p => p.SubCategory).ThenInclude(sc => sc.Category)
+                .Include(p => p.SubSubCategory)
+        .ThenInclude(ssc => ssc.SubCategory)
+            .ThenInclude(sc => sc.Category)
                 .Include(p => p.Brand)
                 .Include(p => p.Variants)
-                    .ThenInclude(v => v.Images)          // ← include variant images
+                    .ThenInclude(v => v.Images)
                 .Include(p => p.Images)
                 .AsQueryable();
 
@@ -52,10 +54,10 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 query = query.Where(p => p.Name.Contains(parameters.Search));
 
             if (parameters.CategoryId.HasValue)
-                query = query.Where(p => p.SubCategory.CategoryId == parameters.CategoryId.Value);
+                query = query.Where(p => p.SubSubCategory.SubCategory.CategoryId == parameters.CategoryId.Value);
 
             if (parameters.SubCategoryId.HasValue)
-                query = query.Where(p => p.SubCategoryId == parameters.SubCategoryId.Value);
+                query = query.Where(p => p.SubSubCategory.SubCategoryId == parameters.SubCategoryId.Value);
 
             if (parameters.IsActive.HasValue)
                 query = query.Where(p => p.IsActive == parameters.IsActive.Value);
@@ -80,16 +82,19 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     Description = p.Description,
                     Price = p.Price,
                     IsActive = p.IsActive,
-                    CategoryName = p.SubCategory.Category.EnglishName,
-                    SubCategoryName = p.SubCategory.EnglishName,
+                    CategoryName = p.SubSubCategory.SubCategory.Category.EnglishName,
+                    SubCategoryName = p.SubSubCategory.SubCategory.EnglishName,
+                    SubSubCategoryName= p.SubSubCategory.EnglishName,
                     Gender = p.Gender,
                     Variants = p.Variants.Select(v => new ProductVariantDto
                     {
                         Id = v.Id,
                         Color = v.Color,
+                        ColorName = v.ColorName,
                         Size = v.Size,
                         StockQuantity = v.StockQuantity,
-                        Images = v.Images.Select(img => img.ImageUrl).ToList() // ← variant images
+                        Price = v.Price,
+                        Images = v.Images.Select(img => img.ImageUrl).ToList()
                     }).ToList(),
                     Images = p.Images.Select(img => img.ImageUrl).ToList()
                 }).ToListAsync();
@@ -101,7 +106,9 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
         public async Task<ActionResult<ProductDto>> GetById(int id)
         {
             var product = await _context.Products
-                .Include(p => p.SubCategory).ThenInclude(sc => sc.Category)
+                .Include(p => p.SubSubCategory)
+        .ThenInclude(ssc => ssc.SubCategory)
+            .ThenInclude(sc => sc.Category)
                 .Include(p => p.Brand)
                 .Include(p => p.Variants)
                     .ThenInclude(v => v.Images)          // ← include variant images
@@ -118,16 +125,19 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 Description = product.Description,
                 Price = product.Price,
                 IsActive = product.IsActive,
-                CategoryName = product.SubCategory.Category.EnglishName,
-                SubCategoryName = product.SubCategory.EnglishName,
+                CategoryName = product.SubSubCategory.SubCategory.Category.EnglishName,
+                SubCategoryName = product.SubSubCategory.SubCategory.EnglishName,
+                SubSubCategoryName = product.SubSubCategory.EnglishName,
                 Gender = product.Gender,
                 Variants = product.Variants.Select(v => new ProductVariantDto
                 {
                     Id = v.Id,
                     Color = v.Color,
+                    ColorName = v.ColorName,
                     Size = v.Size,
                     StockQuantity = v.StockQuantity,
-                    Images = v.Images.Select(img => img.ImageUrl).ToList() // ← variant images
+                    Price = v.Price,
+                    Images = v.Images.Select(img => img.ImageUrl).ToList()
                 }).ToList(),
                 Images = product.Images.Select(img => img.ImageUrl).ToList()
             };
@@ -171,23 +181,29 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
 
             try
             {
-                // Validate that variant lists have the same length
-                if (dto.VariantColors.Count != dto.VariantSizes.Count ||
-                    dto.VariantColors.Count != dto.VariantStockQuantities.Count)
+                // عدد المتغيرات الأساسي
+                int variantCount = dto.VariantColors.Count;
+
+                // التحقق من تطابق أطوال القوائم الإلزامية
+                if (variantCount != dto.VariantSizes.Count ||
+                    variantCount != dto.VariantStockQuantities.Count)
                 {
-                    return BadRequest("Variant data lists must have the same length.");
+                    return BadRequest("Variant data lists (Colors, Sizes, StockQuantities) must have the same length.");
                 }
 
-                // Validate that each image index is within range
-                if (dto.VariantImageIndices.Any(idx => idx < 0 || idx >= dto.VariantColors.Count))
-                {
+                // التحقق من أطوال القوائم الاختيارية إذا كانت موجودة
+                if (dto.VariantColorNames != null && dto.VariantColorNames.Count != variantCount)
+                    return BadRequest("VariantColorNames list must have the same length as VariantColors.");
+                if (dto.VariantPrices != null && dto.VariantPrices.Count != variantCount)
+                    return BadRequest("VariantPrices list must have the same length as VariantColors.");
+
+                // التحقق من أن كل مؤشر صورة موجود ضمن النطاق
+                if (dto.VariantImageIndices.Any(idx => idx < 0 || idx >= variantCount))
                     return BadRequest("Variant image index out of range.");
-                }
 
-                // Begin transaction
                 await using var transaction = await _context.Database.BeginTransactionAsync();
 
-                // 1. Create product
+                // 1. إنشاء المنتج
                 var product = new Product
                 {
                     Name = dto.Name,
@@ -196,12 +212,12 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     Gender = dto.Gender,
                     IsActive = dto.IsActive,
                     BrandId = brandId,
-                    SubCategoryId = dto.SubCategoryId
+                    SubSubCategoryId = dto.SubSubCategoryId  
                 };
                 _context.Products.Add(product);
                 await _context.SaveChangesAsync();
 
-                // 2. Save product-level images
+                // 2. حفظ صور المنتج
                 if (dto.Images != null)
                 {
                     foreach (var file in dto.Images)
@@ -221,27 +237,29 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     await _context.SaveChangesAsync();
                 }
 
-                // 3. Create variants and collect their IDs
+                // 3. إنشاء المتغيرات مع دعم ColorName و Price
                 var variantIds = new List<int>();
-                for (int i = 0; i < dto.VariantColors.Count; i++)
+                for (int i = 0; i < variantCount; i++)
                 {
                     var variant = new ProductVariant
                     {
                         ProductId = product.Id,
                         Color = dto.VariantColors[i],
+                        ColorName = dto.VariantColorNames?[i],           // قد تكون null
                         Size = dto.VariantSizes[i],
-                        StockQuantity = dto.VariantStockQuantities[i]
+                        StockQuantity = dto.VariantStockQuantities[i],
+                        Price = dto.VariantPrices?[i]                    // قد تكون null
                     };
                     _context.ProductVariants.Add(variant);
-                    await _context.SaveChangesAsync(); // Save to get ID
+                    await _context.SaveChangesAsync(); // للحصول على ID
                     variantIds.Add(variant.Id);
                 }
 
-                // 4. Associate images with variants using the index mapping
+                // 4. ربط الصور بالمتغيرات باستخدام الـ indices
                 for (int fileIdx = 0; fileIdx < dto.VariantImageFiles.Count; fileIdx++)
                 {
                     var file = dto.VariantImageFiles[fileIdx];
-                    var variantIndex = dto.VariantImageIndices[fileIdx]; // which variant this image belongs to
+                    var variantIndex = dto.VariantImageIndices[fileIdx];
                     var variantId = variantIds[variantIndex];
 
                     var fileName = $"{Guid.NewGuid()}_{file.FileName}";
@@ -308,7 +326,8 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 _logger.LogInformation("Updating product {ProductId} with {VariantCount} variants", id, dto.VariantColors.Count);
                 for (int i = 0; i < dto.VariantColors.Count; i++)
                 {
-                    _logger.LogInformation($"Variant {i}: Color={dto.VariantColors[i]}, Size={dto.VariantSizes[i]}, Stock={dto.VariantStockQuantities[i]}");
+                    _logger.LogInformation($"Variant {i}: Color={dto.VariantColors[i]}, Size={dto.VariantSizes[i]}, Stock={dto.VariantStockQuantities[i]}, " +
+                $"ColorName={(dto.VariantColorNames?[i] ?? "null")}, Price={(dto.VariantPrices?[i]?.ToString() ?? "null")}");
                 }
 
                 product.Name = dto.Name;
@@ -316,7 +335,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                 product.Price = dto.Price;
                 product.IsActive = dto.IsActive;
                 product.Gender = dto.Gender;
-                product.SubCategoryId = dto.SubCategoryId;
+                product.SubSubCategoryId = dto.SubSubCategoryId;
 
                 // ---------- Product images ----------
                 if (dto.ImagesToDelete?.Any() == true)
@@ -397,23 +416,33 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                     var color = dto.VariantColors[i];
                     var size = dto.VariantSizes[i];
                     var stock = dto.VariantStockQuantities[i];
+                    var colorName = dto.VariantColorNames?[i];   // قد تكون null
+                    var price = dto.VariantPrices?[i];           // قد تكون null
                     var key = (color, size);
 
                     if (existingVariants.TryGetValue(key, out var existingVariant))
                     {
+                        // Update existing variant
                         existingVariant.StockQuantity = stock;
+                        if (colorName != null)
+                            existingVariant.ColorName = colorName;   // تحديث اسم اللون إذا أرسل
+                        if (price.HasValue)
+                            existingVariant.Price = price;           // تحديث السعر إذا أرسل
                         variantIdsInOrder.Add(existingVariant.Id);
                         matchedExistingVariantIds.Add(existingVariant.Id);
                         _logger.LogInformation($"Matched existing variant ID {existingVariant.Id} for {color}/{size}");
                     }
                     else
                     {
+                        // Create new variant
                         var newVariant = new ProductVariant
                         {
                             ProductId = product.Id,
                             Color = color,
+                            ColorName = colorName,
                             Size = size,
-                            StockQuantity = stock
+                            StockQuantity = stock,
+                            Price = price
                         };
                         newVariantsList.Add(newVariant);
                         variantIdsInOrder.Add(-1);
@@ -434,7 +463,7 @@ namespace Digital_Mall_API.Controllers.BrandAdmin
                         if (variantIdsInOrder[i] == -1)
                         {
                             variantIdsInOrder[i] = newVariantsList[newIdx].Id;
-                            matchedExistingVariantIds.Add(newVariantsList[newIdx].Id); // ← المفتاح
+                            matchedExistingVariantIds.Add(newVariantsList[newIdx].Id);
                             _logger.LogInformation($"New variant ID {newVariantsList[newIdx].Id} assigned to index {i}");
                             newIdx++;
                         }

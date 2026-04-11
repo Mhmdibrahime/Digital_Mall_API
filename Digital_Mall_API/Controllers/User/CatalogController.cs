@@ -4,6 +4,7 @@ using Digital_Mall_API.Models.DTOs.UserDTOs;
 using Digital_Mall_API.Models.DTOs.UserDTOs.ReelsDTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Digital_Mall_API.Controllers.User
 {
@@ -50,19 +51,20 @@ namespace Digital_Mall_API.Controllers.User
             if (searchType == "all" || searchType == "products")
             {
                 var productQuery = _context.Products
-                    .Include(p => p.Brand)
-                    .Include(p => p.SubCategory)
-                        .ThenInclude(sc => sc.Category)
-                    .Include(p => p.ProductDiscount)
-                    .Include(p => p.Images)
-                    .Include(p => p.Variants)
-                    .Where(p => p.IsActive && p.Brand.Status == "Active" &&
-                               (p.Name.ToLower().Contains(searchTerm) ||
-                                p.Description.ToLower().Contains(searchTerm) ||
-                                p.Brand.OfficialName.ToLower().Contains(searchTerm) ||
-                                p.SubCategory.EnglishName.ToLower().Contains(searchTerm) || p.SubCategory.ArabicName.Contains(searchTerm) ||
-                                p.SubCategory.Category.EnglishName.ToLower().Contains(searchTerm) || p.SubCategory.Category.ArabicName.Contains(searchTerm)))
-                    .AsQueryable();
+     .Include(p => p.SubSubCategory)
+         .ThenInclude(ssc => ssc.SubCategory)
+             .ThenInclude(sc => sc.Category)
+     .Where(p => p.IsActive && p.Brand.Status == "Active" &&
+                (p.Name.ToLower().Contains(searchTerm) ||
+                 p.Description.ToLower().Contains(searchTerm) ||
+                 p.Brand.OfficialName.ToLower().Contains(searchTerm) ||
+                 p.SubSubCategory.EnglishName.ToLower().Contains(searchTerm) ||
+                 p.SubSubCategory.ArabicName.ToLower().Contains(searchTerm) ||
+                 p.SubSubCategory.SubCategory.EnglishName.ToLower().Contains(searchTerm) ||
+                 p.SubSubCategory.SubCategory.ArabicName.ToLower().Contains(searchTerm) ||
+                 p.SubSubCategory.SubCategory.Category.EnglishName.ToLower().Contains(searchTerm) ||
+                 p.SubSubCategory.SubCategory.Category.ArabicName.ToLower().Contains(searchTerm)))
+                     .AsQueryable();
 
                 // Apply filters for products
                 if (!string.IsNullOrEmpty(gender))
@@ -242,8 +244,9 @@ namespace Digital_Mall_API.Controllers.User
 
             var query = _context.Products
                 .Include(p => p.Brand)
-                .Include(p => p.SubCategory)
-                    .ThenInclude(sc => sc.Category)
+.Include(p => p.SubSubCategory)
+            .ThenInclude(ssc => ssc.SubCategory)
+                .ThenInclude(sc => sc.Category)
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
@@ -252,9 +255,7 @@ namespace Digital_Mall_API.Controllers.User
 
             // ✅ filter by category
             if (categoryId.HasValue)
-            {
-                query = query.Where(p => p.SubCategory.Category.Id == categoryId.Value);
-            }
+                query = query.Where(p => p.SubSubCategory.SubCategory.CategoryId == categoryId.Value);
 
 
             if (!string.IsNullOrEmpty(gender))
@@ -350,7 +351,9 @@ namespace Digital_Mall_API.Controllers.User
 
         [HttpGet("category-details")]
         public async Task<IActionResult> GetCategoryWithProducts(
-    [FromQuery] int categoryId,
+   [FromQuery] int categoryId,
+    [FromQuery] int? subCategoryId,
+    [FromQuery] int? subSubCategoryId,
     [FromQuery] string? gender,
     [FromQuery] string? size,
     [FromQuery] decimal? minPrice,
@@ -362,22 +365,41 @@ namespace Digital_Mall_API.Controllers.User
 
             // ✅ أول حاجة نجيب الكاتيجوري بالسب كاتيجوريز
             var category = await _context.Categories
-                .Include(c => c.SubCategories)
-                .FirstOrDefaultAsync(c => c.Id == categoryId);
+       .Include(c => c.SubCategories)
+           .ThenInclude(sc => sc.SubSubCategories)
+       .FirstOrDefaultAsync(c => c.Id == categoryId);
 
             if (category == null)
                 return NotFound(new { message = "Category not found" });
 
-            var subCategoryIds = category.SubCategories.Select(sc => sc.Id).ToList();
+            var subSubCategoryIds = new List<int>();
+            if (subSubCategoryId.HasValue)
+                subSubCategoryIds.Add(subSubCategoryId.Value);
+            else if (subCategoryId.HasValue)
+            {
+                var subCat = await _context.SubCategories
+                    .Include(sc => sc.SubSubCategories)
+                    .FirstOrDefaultAsync(sc => sc.Id == subCategoryId.Value);
+                if (subCat != null)
+                    subSubCategoryIds = subCat.SubSubCategories.Select(ssc => ssc.Id).ToList();
+            }
+            else
+            {
+                subSubCategoryIds = category.SubCategories
+                    .SelectMany(sc => sc.SubSubCategories)
+                    .Select(ssc => ssc.Id)
+                    .ToList();
+            }
 
             // ✅ بعدين نجيب المنتجات اللي تنتمي لأي من الساب كاتيجوريز دي
             var query = _context.Products
                 .Include(p => p.Brand)
-                .Include(p => p.SubCategory)
+                .Include(p => p.SubSubCategory)
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
-                .Where(p => subCategoryIds.Contains(p.SubCategoryId) && p.IsActive && p.Brand.Status == "Active" )
+                .Where(p => subSubCategoryIds.Contains((int)p.SubSubCategoryId) && p.IsActive && p.Brand.Status == "Active")
+
                 .AsQueryable();
 
             // ✅ apply filters
@@ -472,7 +494,7 @@ namespace Digital_Mall_API.Controllers.User
                 .Include(p => p.ProductDiscount)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
-                .Where(p => p.SubCategoryId == subCategoryId && p.IsActive && p.Brand.Status == "Active" )
+                .Where(p => p.SubSubCategory.SubCategoryId == subCategoryId && p.IsActive && p.Brand.Status == "Active" )
                 .AsQueryable();
 
             // ✅ filters

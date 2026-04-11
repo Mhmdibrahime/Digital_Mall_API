@@ -64,6 +64,7 @@ namespace Digital_Mall_API.Models.Data
         public DbSet<ProductFeedback> ProductFeedbacks { get; set; }
         public DbSet<ShippingGovernorate> ShippingGovernorates { get; set; }
         public DbSet<ProductVariantImage> ProductVariantImages { get; set; }
+        public DbSet<SubSubCategory> SubSubCategories { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -136,9 +137,9 @@ namespace Digital_Mall_API.Models.Data
                 .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Product>()
-                .HasOne(p => p.SubCategory)
+                .HasOne(p => p.SubSubCategory)
                 .WithMany(c => c.Products)
-                .HasForeignKey(p => p.SubCategoryId)
+                .HasForeignKey(p => p.SubSubCategoryId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Product>()
